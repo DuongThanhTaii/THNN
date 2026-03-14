@@ -3,8 +3,12 @@ import { useState } from "react";
 import { getGoogleConnectInfo, getJiraConnectInfo } from "../lib/api";
 
 export function IntegrationsPage() {
-  const [jiraInfo, setJiraInfo] = useState<Record<string, unknown> | null>(null);
-  const [googleInfo, setGoogleInfo] = useState<Record<string, unknown> | null>(null);
+  const [jiraInfo, setJiraInfo] = useState<Record<string, unknown> | null>(
+    null,
+  );
+  const [googleInfo, setGoogleInfo] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [error, setError] = useState("");
 
   const fetchJira = async () => {

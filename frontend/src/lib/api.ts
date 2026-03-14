@@ -68,7 +68,9 @@ export function createTask(input: {
 }
 
 export function getJiraConnectInfo(): Promise<Record<string, unknown>> {
-  return requestJson<Record<string, unknown>>("/api/v1/integrations/jira/connect");
+  return requestJson<Record<string, unknown>>(
+    "/api/v1/integrations/jira/connect",
+  );
 }
 
 export function getGoogleConnectInfo(): Promise<Record<string, unknown>> {

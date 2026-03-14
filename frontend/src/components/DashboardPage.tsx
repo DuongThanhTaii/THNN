@@ -77,7 +77,11 @@ export function DashboardPage() {
           <p>
             Current workspace id: <strong>{workspaceId}</strong>
           </p>
-          <button onClick={handleBootstrap} className="btn-primary" type="button">
+          <button
+            onClick={handleBootstrap}
+            className="btn-primary"
+            type="button"
+          >
             Create Demo Workspace
           </button>
         </article>
