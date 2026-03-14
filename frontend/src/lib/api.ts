@@ -135,7 +135,9 @@ export function deleteTask(input: {
   );
 }
 
-export function getJiraConnectInfo(workspaceId = 1): Promise<Record<string, unknown>> {
+export function getJiraConnectInfo(
+  workspaceId = 1,
+): Promise<Record<string, unknown>> {
   const params = new URLSearchParams();
   params.set("workspace_id", String(workspaceId));
 

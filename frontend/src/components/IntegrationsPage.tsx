@@ -105,13 +105,25 @@ export function IntegrationsPage() {
           />
         </label>
         <div className="toolbar">
-          <button className="btn-secondary" type="button" onClick={fetchAccounts}>
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={fetchAccounts}
+          >
             Refresh Accounts
           </button>
-          <button className="btn-secondary" type="button" onClick={callbackJira}>
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={callbackJira}
+          >
             Simulate Jira Callback
           </button>
-          <button className="btn-secondary" type="button" onClick={callbackGoogle}>
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={callbackGoogle}
+          >
             Simulate Google Callback
           </button>
         </div>

@@ -1,11 +1,15 @@
 """Integration endpoints for Jira and Google Calendar."""
 
 import base64
+import hashlib
 import json
+from functools import lru_cache
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
+from cryptography.fernet import Fernet
 
+from config.settings import get_settings
 from integrations.google_calendar import GoogleCalendarService
 from integrations.jira import JiraService
 from storage.db import get_db_cursor
@@ -13,13 +17,24 @@ from storage.db import get_db_cursor
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
-def _encode_token(value: str) -> str:
-    """Encode token-like values before DB write.
+@lru_cache
+def _build_fernet() -> Fernet:
+    settings = get_settings()
+    master_key = settings.encryption_master_key.strip()
+    if not master_key:
+        raise HTTPException(
+            status_code=500,
+            detail="ENCRYPTION_MASTER_KEY is required for integration token encryption",
+        )
 
-    This is an obfuscation placeholder for early development. Replace with a
-    proper encryption flow tied to ENCRYPTION_MASTER_KEY in production.
-    """
-    return base64.b64encode(value.encode("utf-8")).decode("ascii")
+    # Fernet requires a 32-byte url-safe base64 key.
+    derived = hashlib.sha256(master_key.encode("utf-8")).digest()
+    fernet_key = base64.urlsafe_b64encode(derived)
+    return Fernet(fernet_key)
+
+
+def _encrypt_token(value: str) -> str:
+    return _build_fernet().encrypt(value.encode("utf-8")).decode("ascii")
 
 
 def _upsert_integration_account(
@@ -65,8 +80,8 @@ def _upsert_integration_account(
                     workspace_id,
                     provider,
                     account_label,
-                    _encode_token(access_token),
-                    _encode_token(refresh_token) if refresh_token else None,
+                    _encrypt_token(access_token),
+                    _encrypt_token(refresh_token) if refresh_token else None,
                     expires_at,
                     json.dumps(metadata),
                 ),
@@ -88,8 +103,8 @@ def _upsert_integration_account(
             """,
             (
                 account_label,
-                _encode_token(access_token),
-                _encode_token(refresh_token) if refresh_token else None,
+                _encrypt_token(access_token),
+                _encrypt_token(refresh_token) if refresh_token else None,
                 expires_at,
                 json.dumps(metadata),
                 integration_id,

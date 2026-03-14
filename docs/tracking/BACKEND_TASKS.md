@@ -65,7 +65,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## B7 - Reliability and Security
 
-- [ ] BE-701 Add central secret handling and key rotation guide. (TODO)
+- [ ] BE-701 Add central secret handling and key rotation guide. (IN_PROGRESS)
 - [ ] BE-702 Add rate limits per user/workspace/channel. (TODO)
 - [ ] BE-703 Add distributed locks for critical task execution. (TODO)
 - [ ] BE-704 Add tracing/metrics/log correlation IDs. (TODO)

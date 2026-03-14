@@ -47,6 +47,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Added workspace management API scaffold (list/create/delete) to support multi-workspace flows.
 - Implemented integration account persistence for Jira/Google callback flow and added `/api/v1/integrations/accounts` listing endpoint.
 - Updated integrations frontend to support workspace-aware connect payloads, callback simulation, and connected accounts display.
+- Replaced integration token obfuscation with Fernet encryption derived from `ENCRYPTION_MASTER_KEY`.
 
 ## Risk Register
 

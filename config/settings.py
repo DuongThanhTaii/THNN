@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = Field(
         default=30, validation_alias="REFRESH_TOKEN_EXPIRE_DAYS"
     )
+    encryption_master_key: str = Field(
+        default="", validation_alias="ENCRYPTION_MASTER_KEY"
+    )
 
     # ==================== Integrations ====================
     jira_base_url: str = Field(default="", validation_alias="JIRA_BASE_URL")
