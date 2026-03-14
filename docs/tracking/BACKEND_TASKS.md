@@ -25,7 +25,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 - [x] BE-201 Add API namespace /api/v1 with versioned routers. (DONE)
 - [x] BE-202 Add auth endpoints (login, refresh, logout). (SCAFFOLDED)
-- [ ] BE-203 Add workspace and user management endpoints. (IN_PROGRESS)
+- [ ] BE-203 Add workspace and user management endpoints. (SCAFFOLDED)
 - [x] BE-204 Add task CRUD endpoints with pagination/filtering. (DONE)
 - [ ] BE-205 Add automation CRUD endpoints. (TODO)
 - [ ] BE-206 Add websocket server channel for realtime updates. (SCAFFOLDED)

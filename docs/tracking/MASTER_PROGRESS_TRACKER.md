@@ -44,6 +44,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Added company-standard Git naming and push guideline document.
 - Added realtime websocket endpoint scaffold at `/ws/workspaces/{workspace_id}` with heartbeat/echo.
 - Expanded task workflow with API-side filter/pagination/update/delete and frontend controls for status transitions and deletion.
+- Added workspace management API scaffold (list/create/delete) to support multi-workspace flows.
 
 ## Risk Register
 
