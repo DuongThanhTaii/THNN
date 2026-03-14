@@ -42,6 +42,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Added frontend API client + websocket client baseline and connected dashboard/tasks/integrations pages to backend.
 - Added bootstrap demo workspace endpoint and integration OAuth callback skeleton endpoints.
 - Added company-standard Git naming and push guideline document.
+- Added realtime websocket endpoint scaffold at `/ws/workspaces/{workspace_id}` with heartbeat/echo.
 
 ## Risk Register
 

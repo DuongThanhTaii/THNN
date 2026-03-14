@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from .realtime import router as realtime_router
 from .routers.auth import router as auth_router
 from .routers.automations import router as automations_router
 from .routers.integrations import router as integrations_router
@@ -21,3 +22,4 @@ v1_router.include_router(providers_router)
 # Webhooks are intentionally outside /api/v1.
 root_webhook_router = APIRouter()
 root_webhook_router.include_router(webhooks_router)
+root_webhook_router.include_router(realtime_router)

@@ -28,7 +28,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 - [ ] BE-203 Add workspace and user management endpoints. (IN_PROGRESS)
 - [ ] BE-204 Add task CRUD endpoints with pagination/filtering. (IN_PROGRESS)
 - [ ] BE-205 Add automation CRUD endpoints. (TODO)
-- [ ] BE-206 Add websocket server channel for realtime updates. (TODO)
+- [ ] BE-206 Add websocket server channel for realtime updates. (SCAFFOLDED)
 - [ ] BE-207 Add role-based access control middleware. (TODO)
 
 ## B3 - Integrations (Jira)
