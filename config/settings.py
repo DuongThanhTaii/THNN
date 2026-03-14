@@ -24,6 +24,48 @@ def _env_files() -> tuple[Path, ...]:
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
+    # ==================== Database ====================
+    # Optional PostgreSQL URL (e.g. Neon). If empty, file-based session store is used.
+    database_url: str = Field(default="", validation_alias="DATABASE_URL")
+    redis_url: str = Field(default="", validation_alias="REDIS_URL")
+
+    # ==================== App / Deployment ====================
+    app_env: str = Field(default="development", validation_alias="APP_ENV")
+    api_base_url: str = Field(default="", validation_alias="API_BASE_URL")
+    public_dashboard_url: str = Field(
+        default="", validation_alias="PUBLIC_DASHBOARD_URL"
+    )
+    cors_allow_origins: str = Field(default="", validation_alias="CORS_ALLOW_ORIGINS")
+
+    # ==================== Auth / Security ====================
+    jwt_secret: str = Field(default="", validation_alias="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
+    access_token_expire_minutes: int = Field(
+        default=60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
+    refresh_token_expire_days: int = Field(
+        default=30, validation_alias="REFRESH_TOKEN_EXPIRE_DAYS"
+    )
+
+    # ==================== Integrations ====================
+    jira_base_url: str = Field(default="", validation_alias="JIRA_BASE_URL")
+    jira_client_id: str = Field(default="", validation_alias="JIRA_CLIENT_ID")
+    jira_client_secret: str = Field(default="", validation_alias="JIRA_CLIENT_SECRET")
+    jira_webhook_secret: str = Field(
+        default="", validation_alias="JIRA_WEBHOOK_SECRET"
+    )
+
+    google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(
+        default="", validation_alias="GOOGLE_CLIENT_SECRET"
+    )
+    google_redirect_uri: str = Field(
+        default="", validation_alias="GOOGLE_REDIRECT_URI"
+    )
+    google_webhook_secret: str = Field(
+        default="", validation_alias="GOOGLE_WEBHOOK_SECRET"
+    )
+
     # ==================== OpenRouter Config ====================
     open_router_api_key: str = Field(default="", validation_alias="OPENROUTER_API_KEY")
 

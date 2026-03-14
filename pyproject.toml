@@ -21,6 +21,7 @@ dependencies = [
     "pydantic-settings>=2.12.0",
     "openai>=2.16.0",
     "loguru>=0.7.0",
+    "psycopg[binary]>=3.2.0",
 ]
 
 [project.scripts]
@@ -41,7 +42,15 @@ voice_local = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["api", "cli", "config", "messaging", "providers"]
+packages = [
+    "api",
+    "cli",
+    "config",
+    "messaging",
+    "providers",
+    "storage",
+    "integrations",
+]
 
 [tool.uv.sources]
 torch = { index = "pytorch-cu130" }

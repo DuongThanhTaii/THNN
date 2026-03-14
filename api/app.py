@@ -11,9 +11,11 @@ from loguru import logger
 from config.logging_config import configure_logging
 from config.settings import get_settings
 from providers.exceptions import ProviderError
+from storage.migrations.runner import run_migrations
 
 from .dependencies import cleanup_provider
 from .routes import router
+from .v1.router import root_webhook_router, v1_router
 
 # Opt-in to future behavior for python-telegram-bot
 os.environ["PTB_TIMEDELTA"] = "1"
@@ -43,6 +45,14 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     settings = get_settings()
     logger.info("Starting Claude Code Proxy...")
+
+    if settings.database_url.strip():
+        try:
+            applied_count = run_migrations()
+            logger.info(f"Database migrations ready (applied={applied_count})")
+        except Exception as e:
+            logger.error(f"Failed to apply DB migrations: {e}")
+            raise
 
     # Initialize messaging platform if configured
     messaging_platform = None
@@ -92,9 +102,16 @@ async def lifespan(app: FastAPI):
             )
 
             # Initialize session store
-            session_store = SessionStore(
-                storage_path=os.path.join(data_path, "sessions.json")
-            )
+            if settings.database_url.strip():
+                from messaging.postgres_session import PostgresSessionStore
+
+                session_store = PostgresSessionStore(settings.database_url)
+                logger.info("Using PostgreSQL session store")
+            else:
+                session_store = SessionStore(
+                    storage_path=os.path.join(data_path, "sessions.json")
+                )
+                logger.info("Using file-based session store")
 
             # Create and register message handler
             message_handler = ClaudeMessageHandler(
@@ -190,6 +207,8 @@ def create_app() -> FastAPI:
 
     # Register routes
     app.include_router(router)
+    app.include_router(v1_router)
+    app.include_router(root_webhook_router)
 
     # Exception handlers
     @app.exception_handler(ProviderError)
