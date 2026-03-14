@@ -28,8 +28,8 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## F3 - Integrations UI
 
-- [ ] FE-301 Build Jira connection wizard and status panel. (TODO)
-- [ ] FE-302 Build Google Calendar connection wizard and status panel. (TODO)
+- [ ] FE-301 Build Jira connection wizard and status panel. (IN_PROGRESS)
+- [ ] FE-302 Build Google Calendar connection wizard and status panel. (IN_PROGRESS)
 - [ ] FE-303 Build provider profile manager (local/cloud selection). (TODO)
 - [ ] FE-304 Build health panel for providers and integration webhooks. (TODO)
 

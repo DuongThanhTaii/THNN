@@ -21,6 +21,21 @@ export type Task = {
   priority: string;
 };
 
+export type IntegrationAccount = {
+  id: number;
+  provider: string;
+  account_label: string;
+  token_expires_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export type IntegrationAccountsResponse = {
+  workspace_id: number;
+  count: number;
+  items: IntegrationAccount[];
+};
+
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
   "http://localhost:8082";
@@ -68,7 +83,8 @@ export function listTasksFiltered(input: {
   if (input.status) params.set("status", input.status);
   if (input.q) params.set("q", input.q);
   if (typeof input.limit === "number") params.set("limit", String(input.limit));
-  if (typeof input.offset === "number") params.set("offset", String(input.offset));
+  if (typeof input.offset === "number")
+    params.set("offset", String(input.offset));
 
   return requestJson<Task[]>(`/api/v1/tasks?${params.toString()}`);
 }
@@ -96,7 +112,8 @@ export function updateTask(input: {
     workspace_id: input.workspace_id,
   };
   if (typeof input.title === "string") payload.title = input.title;
-  if (typeof input.description === "string") payload.description = input.description;
+  if (typeof input.description === "string")
+    payload.description = input.description;
   if (typeof input.status === "string") payload.status = input.status;
   if (typeof input.priority === "string") payload.priority = input.priority;
 
@@ -118,14 +135,65 @@ export function deleteTask(input: {
   );
 }
 
-export function getJiraConnectInfo(): Promise<Record<string, unknown>> {
+export function getJiraConnectInfo(workspaceId = 1): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(workspaceId));
+
   return requestJson<Record<string, unknown>>(
-    "/api/v1/integrations/jira/connect",
+    `/api/v1/integrations/jira/connect?${params.toString()}`,
+    { method: "POST" },
   );
 }
 
-export function getGoogleConnectInfo(): Promise<Record<string, unknown>> {
+export function getGoogleConnectInfo(
+  workspaceId = 1,
+): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(workspaceId));
+
   return requestJson<Record<string, unknown>>(
-    "/api/v1/integrations/google/connect",
+    `/api/v1/integrations/google/connect?${params.toString()}`,
+    { method: "POST" },
+  );
+}
+
+export function simulateJiraCallback(input: {
+  workspaceId: number;
+  code: string;
+  state?: string;
+}): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(input.workspaceId));
+  params.set("code", input.code);
+  if (input.state) params.set("state", input.state);
+
+  return requestJson<Record<string, unknown>>(
+    `/api/v1/integrations/jira/callback?${params.toString()}`,
+  );
+}
+
+export function simulateGoogleCallback(input: {
+  workspaceId: number;
+  code: string;
+  state?: string;
+}): Promise<Record<string, unknown>> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(input.workspaceId));
+  params.set("code", input.code);
+  if (input.state) params.set("state", input.state);
+
+  return requestJson<Record<string, unknown>>(
+    `/api/v1/integrations/google/callback?${params.toString()}`,
+  );
+}
+
+export function listIntegrationAccounts(
+  workspaceId: number,
+): Promise<IntegrationAccountsResponse> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(workspaceId));
+
+  return requestJson<IntegrationAccountsResponse>(
+    `/api/v1/integrations/accounts?${params.toString()}`,
   );
 }
