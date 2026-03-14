@@ -25,6 +25,14 @@ class TaskResponse(BaseModel):
     priority: str
 
 
+class TaskUpdateRequest(BaseModel):
+    workspace_id: int = Field(ge=1)
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+
+
 class GenericMessageResponse(BaseModel):
     status: str
     message: str

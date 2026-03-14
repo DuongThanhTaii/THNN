@@ -21,7 +21,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 ## F2 - Dashboard Core
 
 - [ ] FE-201 Build realtime activity feed (chat, tasks, sync events). (TODO)
-- [ ] FE-202 Build unified task board (kanban + list mode). (TODO)
+- [ ] FE-202 Build unified task board (kanban + list mode). (IN_PROGRESS)
 - [ ] FE-203 Build calendar timeline view with Jira-linked markers. (TODO)
 - [ ] FE-204 Build command center with quick actions. (TODO)
 - [ ] FE-205 Build global search and filters. (TODO)
