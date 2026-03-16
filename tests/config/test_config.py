@@ -126,6 +126,20 @@ class TestSettings:
         settings = Settings()
         assert settings.jira_oauth_scopes == "read:jira-user offline_access"
 
+    def test_google_oauth_scopes_from_env(self, monkeypatch):
+        """GOOGLE_OAUTH_SCOPES env var is loaded into settings."""
+        from config.settings import Settings
+
+        monkeypatch.setenv(
+            "GOOGLE_OAUTH_SCOPES",
+            "openid email profile https://www.googleapis.com/auth/calendar",
+        )
+        settings = Settings()
+        assert (
+            settings.google_oauth_scopes
+            == "openid email profile https://www.googleapis.com/auth/calendar"
+        )
+
 
 # --- NimSettings Validation Tests ---
 class TestNimSettingsValidBounds:

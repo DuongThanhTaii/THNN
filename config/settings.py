@@ -70,6 +70,10 @@ class Settings(BaseSettings):
         default="", validation_alias="GOOGLE_CLIENT_SECRET"
     )
     google_redirect_uri: str = Field(default="", validation_alias="GOOGLE_REDIRECT_URI")
+    google_oauth_scopes: str = Field(
+        default="openid email profile https://www.googleapis.com/auth/calendar",
+        validation_alias="GOOGLE_OAUTH_SCOPES",
+    )
     google_webhook_secret: str = Field(
         default="", validation_alias="GOOGLE_WEBHOOK_SECRET"
     )

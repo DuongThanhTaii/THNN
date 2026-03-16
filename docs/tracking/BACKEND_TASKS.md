@@ -41,7 +41,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## B4 - Integrations (Google Calendar)
 
-- [ ] BE-401 Implement Google OAuth2 connection flow. (IN_PROGRESS)
+- [x] BE-401 Implement Google OAuth2 connection flow. (DONE)
 - [ ] BE-402 Implement Google Calendar client wrapper (event CRUD/watch). (TODO)
 - [ ] BE-403 Add Google webhook endpoint with verification logic. (TODO)
 - [ ] BE-404 Add Google event normalization to internal event envelope. (TODO)

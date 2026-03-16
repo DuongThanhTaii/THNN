@@ -50,6 +50,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Replaced integration token obfuscation with Fernet encryption derived from `ENCRYPTION_MASTER_KEY`.
 - Completed BE-101 core data-layer baseline by adding channels/channel_sessions migrations and users-table compatibility migration.
 - Implemented Jira OAuth code flow with signed state validation and live token exchange endpoint handling.
+- Implemented Google OAuth code flow with signed state validation and live token exchange endpoint handling.
 
 ## Risk Register
 

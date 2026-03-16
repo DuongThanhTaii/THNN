@@ -134,15 +134,20 @@ def _encode_state_payload(payload: dict[str, Any]) -> str:
         "utf-8"
     )
     signature = hmac.new(_oauth_state_secret(), payload_bytes, hashlib.sha256).digest()
-    token = base64.urlsafe_b64encode(payload_bytes + b"." + signature).decode("ascii")
-    return token.rstrip("=")
+    payload_token = base64.urlsafe_b64encode(payload_bytes).decode("ascii").rstrip("=")
+    signature_token = base64.urlsafe_b64encode(signature).decode("ascii").rstrip("=")
+    return f"{payload_token}.{signature_token}"
 
 
 def _decode_state_payload(state: str) -> dict[str, Any]:
-    padded = state + "=" * ((4 - (len(state) % 4)) % 4)
     try:
-        token_bytes = base64.urlsafe_b64decode(padded.encode("ascii"))
-        payload_bytes, signature = token_bytes.rsplit(b".", 1)
+        payload_token, signature_token = state.split(".", 1)
+        payload_padded = payload_token + "=" * ((4 - (len(payload_token) % 4)) % 4)
+        signature_padded = signature_token + "=" * (
+            (4 - (len(signature_token) % 4)) % 4
+        )
+        payload_bytes = base64.urlsafe_b64decode(payload_padded.encode("ascii"))
+        signature = base64.urlsafe_b64decode(signature_padded.encode("ascii"))
     except Exception as e:
         raise HTTPException(
             status_code=400,
@@ -269,15 +274,19 @@ async def jira_callback(
 
 
 @router.get("/google/connect")
-async def google_connect_payload() -> dict:
+async def google_connect_payload(workspace_id: int = 1) -> dict:
     service = GoogleCalendarService()
-    return service.build_oauth_connect_payload()
+    state = _build_oauth_state("google_calendar", workspace_id)
+    payload = service.build_oauth_connect_payload(state)
+    payload["workspace_id"] = workspace_id
+    return payload
 
 
 @router.post("/google/connect")
 async def google_connect(workspace_id: int = 1) -> dict:
     service = GoogleCalendarService()
-    payload = service.build_oauth_connect_payload()
+    state = _build_oauth_state("google_calendar", workspace_id)
+    payload = service.build_oauth_connect_payload(state)
     payload["workspace_id"] = workspace_id
     return payload
 
@@ -286,27 +295,55 @@ async def google_connect(workspace_id: int = 1) -> dict:
 async def google_callback(
     code: str = "",
     state: str = "",
-    workspace_id: int = 1,
+    workspace_id: int | None = None,
 ) -> dict:
     if not code.strip():
         raise HTTPException(status_code=400, detail="missing authorization code")
+    if not state.strip():
+        raise HTTPException(status_code=400, detail="missing oauth state")
+
+    state_payload = _validate_oauth_state(state.strip(), "google_calendar")
+    state_workspace_id = int(state_payload["workspace_id"])
+    if workspace_id is not None and workspace_id != state_workspace_id:
+        raise HTTPException(
+            status_code=400, detail="workspace_id does not match oauth state"
+        )
+
+    service = GoogleCalendarService()
+    token_data = await service.exchange_code_for_tokens(code.strip())
+
+    expires_in_raw = token_data.get("expires_in")
+    token_expires_at: datetime | None = None
+    if isinstance(expires_in_raw, int) and expires_in_raw > 0:
+        token_expires_at = datetime.now(UTC) + timedelta(seconds=expires_in_raw)
 
     integration_id = _upsert_integration_account(
-        workspace_id=workspace_id,
+        workspace_id=state_workspace_id,
         provider="google_calendar",
         account_label="Google Calendar OAuth",
-        access_token=f"google_access_{code.strip()}",
-        refresh_token=f"google_refresh_{code.strip()}",
-        metadata={"state": state, "mode": "dev_callback_capture"},
+        access_token=str(token_data["access_token"]),
+        refresh_token=(
+            str(token_data["refresh_token"])
+            if token_data.get("refresh_token") is not None
+            else None
+        ),
+        metadata={
+            "scope": str(token_data.get("scope") or ""),
+            "token_type": str(token_data.get("token_type") or ""),
+            "expires_in": token_data.get("expires_in"),
+            "state_nonce": state_payload.get("nonce"),
+            "mode": "oauth_code_exchange",
+        },
+        token_expires_at=token_expires_at,
     )
 
     return {
         "provider": "google_calendar",
         "status": "connected",
         "message": "Google callback processed and integration account stored.",
-        "workspace_id": workspace_id,
+        "workspace_id": state_workspace_id,
         "integration_id": integration_id,
-        "state": state,
+        "state": state_payload,
     }
 
 
