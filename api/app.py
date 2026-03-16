@@ -14,6 +14,7 @@ from providers.exceptions import ProviderError
 from storage.migrations.runner import run_migrations
 
 from .dependencies import cleanup_provider
+from .rbac import enforce_rbac
 from .routes import router
 from .v1.router import root_webhook_router, v1_router
 
@@ -205,6 +206,10 @@ def create_app() -> FastAPI:
         version="2.0.0",
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def rbac_middleware(request: Request, call_next):
+        return await enforce_rbac(request, call_next)
 
     # Register routes
     app.include_router(router)

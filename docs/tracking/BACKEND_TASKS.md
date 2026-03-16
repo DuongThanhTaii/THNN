@@ -29,7 +29,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 - [x] BE-204 Add task CRUD endpoints with pagination/filtering. (DONE)
 - [x] BE-205 Add automation CRUD endpoints. (DONE)
 - [ ] BE-206 Add websocket server channel for realtime updates. (SCAFFOLDED)
-- [ ] BE-207 Add role-based access control middleware. (TODO)
+- [x] BE-207 Add role-based access control middleware. (DONE)
 
 ## B3 - Integrations (Jira)
 

@@ -59,6 +59,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Completed BE-106 and BE-107 by adding provider profile/health and audit/auth event schema migration.
 - Finished B1 data-layer board scope (BE-101 -> BE-107).
 - Implemented BE-205 by replacing automation endpoint scaffold with workspace-scoped CRUD and API tests.
+- Implemented BE-207 RBAC middleware with role checks and workspace scope enforcement (toggle via RBAC_ENFORCE).
 
 ## Risk Register
 

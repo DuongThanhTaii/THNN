@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     # ==================== Auth / Security ====================
     jwt_secret: str = Field(default="", validation_alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
+    rbac_enforce: bool = Field(default=False, validation_alias="RBAC_ENFORCE")
     access_token_expire_minutes: int = Field(
         default=60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
     )
