@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 
+from api.v1.realtime import publish_workspace_event
 from api.v1.schemas import (
     AutomationCreateRequest,
     AutomationResponse,
@@ -86,7 +87,13 @@ async def create_automation(body: AutomationCreateRequest) -> AutomationResponse
 
     if row is None:
         raise HTTPException(status_code=500, detail="failed to create automation")
-    return _automation_from_row(row)
+    automation = _automation_from_row(row)
+    await publish_workspace_event(
+        workspace_id=automation.workspace_id,
+        event_type="automation.created",
+        payload=automation.model_dump(),
+    )
+    return automation
 
 
 @router.patch("/{automation_id}", response_model=AutomationResponse)
@@ -133,7 +140,13 @@ async def update_automation(
 
     if row is None:
         raise HTTPException(status_code=404, detail="automation not found")
-    return _automation_from_row(row)
+    automation = _automation_from_row(row)
+    await publish_workspace_event(
+        workspace_id=automation.workspace_id,
+        event_type="automation.updated",
+        payload=automation.model_dump(),
+    )
+    return automation
 
 
 @router.delete("/{automation_id}")
@@ -149,5 +162,11 @@ async def delete_automation(
 
     if deleted == 0:
         raise HTTPException(status_code=404, detail="automation not found")
+
+    await publish_workspace_event(
+        workspace_id=workspace_id,
+        event_type="automation.deleted",
+        payload={"automation_id": automation_id, "workspace_id": workspace_id},
+    )
 
     return {"status": "ok", "deleted": deleted}

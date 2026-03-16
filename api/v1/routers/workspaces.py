@@ -3,6 +3,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from api.v1.realtime import publish_workspace_event
 from storage.db import get_db_cursor
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
@@ -77,12 +78,18 @@ async def create_workspace(body: WorkspaceCreateRequest) -> WorkspaceResponse:
         )
         row = cur.fetchone()
 
-    return WorkspaceResponse(
+    workspace = WorkspaceResponse(
         id=int(row[0]),
         slug=str(row[1]),
         name=str(row[2]),
         owner_user_id=int(row[3]) if row[3] is not None else None,
     )
+    await publish_workspace_event(
+        workspace_id=workspace.id,
+        event_type="workspace.created",
+        payload=workspace.model_dump(),
+    )
+    return workspace
 
 
 @router.delete("/{workspace_id}")
@@ -93,5 +100,11 @@ async def delete_workspace(workspace_id: int) -> dict:
 
     if deleted == 0:
         raise HTTPException(status_code=404, detail="workspace not found")
+
+    await publish_workspace_event(
+        workspace_id=workspace_id,
+        event_type="workspace.deleted",
+        payload={"workspace_id": workspace_id},
+    )
 
     return {"status": "ok", "deleted": deleted}

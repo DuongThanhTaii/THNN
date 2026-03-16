@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 
+from api.v1.realtime import publish_workspace_event
 from api.v1.schemas import TaskCreateRequest, TaskResponse, TaskUpdateRequest
 from storage.db import get_db_cursor
 
@@ -91,7 +92,13 @@ async def create_task(body: TaskCreateRequest) -> TaskResponse:
         row = cur.fetchone()
 
     assert row is not None
-    return _task_from_row(row)
+    task = _task_from_row(row)
+    await publish_workspace_event(
+        workspace_id=task.workspace_id,
+        event_type="task.created",
+        payload=task.model_dump(),
+    )
+    return task
 
 
 @router.patch("/{task_id}", response_model=TaskResponse)
@@ -134,7 +141,13 @@ async def update_task(task_id: int, body: TaskUpdateRequest) -> TaskResponse:
 
     if row is None:
         raise HTTPException(status_code=404, detail="task not found")
-    return _task_from_row(row)
+    task = _task_from_row(row)
+    await publish_workspace_event(
+        workspace_id=task.workspace_id,
+        event_type="task.updated",
+        payload=task.model_dump(),
+    )
+    return task
 
 
 @router.delete("/{task_id}")
@@ -148,4 +161,9 @@ async def delete_task(task_id: int, workspace_id: int) -> dict:
 
     if deleted == 0:
         raise HTTPException(status_code=404, detail="task not found")
+    await publish_workspace_event(
+        workspace_id=workspace_id,
+        event_type="task.deleted",
+        payload={"task_id": task_id, "workspace_id": workspace_id},
+    )
     return {"status": "ok", "deleted": deleted}
