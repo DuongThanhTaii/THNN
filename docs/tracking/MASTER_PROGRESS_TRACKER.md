@@ -61,6 +61,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Implemented BE-205 by replacing automation endpoint scaffold with workspace-scoped CRUD and API tests.
 - Implemented BE-207 RBAC middleware with role checks and workspace scope enforcement (toggle via RBAC_ENFORCE).
 - Implemented BE-206 realtime websocket server-push channel with workspace event broadcasting and websocket tests.
+- Implemented BE-203 workspace and user management endpoints (workspace get/update + users list/get/create/update) with API tests.
 
 ## Risk Register
 

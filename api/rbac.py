@@ -47,6 +47,12 @@ def _resolve_policy(path: str, method: str) -> tuple[set[str] | None, bool]:
         if normalized in {"POST", "PATCH", "DELETE"}:
             return WRITE_ROLES, True
 
+    if path.startswith("/api/v1/users"):
+        if normalized == "GET":
+            return READ_ROLES, False
+        if normalized in {"POST", "PATCH", "DELETE"}:
+            return ADMIN_ROLES, False
+
     if path == "/api/v1/workspaces":
         if normalized == "GET":
             return READ_ROLES, False
