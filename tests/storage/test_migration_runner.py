@@ -107,3 +107,37 @@ def test_be103_task_and_automation_run_migration_defines_expected_tables():
     assert "FROM automation_rules ar" in sql
     assert "idx_task_runs_workspace_status" in sql
     assert "idx_automation_runs_workspace_status" in sql
+
+
+def test_be104_integration_tables_exist_in_core_migration():
+    migration_file = runner.MIGRATIONS_DIR / "001_core_tables.sql"
+    sql = migration_file.read_text(encoding="utf-8")
+
+    assert "CREATE TABLE IF NOT EXISTS integration_accounts" in sql
+    assert "CREATE TABLE IF NOT EXISTS jira_issue_links" in sql
+    assert "CREATE TABLE IF NOT EXISTS calendar_event_links" in sql
+
+
+def test_be105_sync_tables_exist_across_core_and_sync_migrations():
+    core_sql = (runner.MIGRATIONS_DIR / "001_core_tables.sql").read_text(
+        encoding="utf-8"
+    )
+    sync_sql = (runner.MIGRATIONS_DIR / "002_sync_tables.sql").read_text(
+        encoding="utf-8"
+    )
+
+    assert "CREATE TABLE IF NOT EXISTS processed_events" in core_sql
+    assert "CREATE TABLE IF NOT EXISTS sync_policies" in sync_sql
+    assert "CREATE TABLE IF NOT EXISTS sync_conflicts" in sync_sql
+
+
+def test_be106_and_be107_provider_and_audit_migration_defines_expected_tables():
+    migration_file = runner.MIGRATIONS_DIR / "007_provider_and_audit_tables.sql"
+    sql = migration_file.read_text(encoding="utf-8")
+
+    assert "CREATE TABLE IF NOT EXISTS provider_profiles" in sql
+    assert "CREATE TABLE IF NOT EXISTS provider_health_checks" in sql
+    assert "CREATE TABLE IF NOT EXISTS audit_logs" in sql
+    assert "CREATE TABLE IF NOT EXISTS auth_events" in sql
+    assert "idx_provider_profiles_workspace_enabled" in sql
+    assert "idx_auth_events_user_occurred" in sql

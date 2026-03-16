@@ -55,6 +55,9 @@ Window: 2026-03-14 -> 2026-03-21
 - Implemented Google Calendar client wrapper methods for calendar/event CRUD and watch registration.
 - Completed BE-102 by adding conversations/messages schema migration with FK and index coverage.
 - Completed BE-103 by adding task_runs/automations/automation_runs migration with compatibility backfill from automation_rules.
+- Reconciled BE-104 and BE-105 as already-covered tables in existing 001/002 migrations (integration and sync schemas).
+- Completed BE-106 and BE-107 by adding provider profile/health and audit/auth event schema migration.
+- Finished B1 data-layer board scope (BE-101 -> BE-107).
 
 ## Risk Register
 
