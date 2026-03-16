@@ -27,7 +27,9 @@ class JiraService:
     def normalize_webhook_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "source": "jira",
-            "event_id": str(payload.get("timestamp") or payload.get("webhookEvent") or "unknown"),
+            "event_id": str(
+                payload.get("timestamp") or payload.get("webhookEvent") or "unknown"
+            ),
             "type": str(payload.get("webhookEvent") or "unknown"),
             "payload": payload,
         }

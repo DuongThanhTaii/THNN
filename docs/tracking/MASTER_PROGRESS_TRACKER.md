@@ -1,6 +1,6 @@
 # Master Progress Tracker
 
-Last Updated: 2026-03-14
+Last Updated: 2026-03-16
 Owner: ThanhTai
 Project: Multi-channel Agent Platform (Jira + Google Calendar + Telegram + CLI + Web + ESP32)
 
@@ -48,6 +48,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Implemented integration account persistence for Jira/Google callback flow and added `/api/v1/integrations/accounts` listing endpoint.
 - Updated integrations frontend to support workspace-aware connect payloads, callback simulation, and connected accounts display.
 - Replaced integration token obfuscation with Fernet encryption derived from `ENCRYPTION_MASTER_KEY`.
+- Completed BE-101 core data-layer baseline by adding channels/channel_sessions migrations and users-table compatibility migration.
 
 ## Risk Register
 

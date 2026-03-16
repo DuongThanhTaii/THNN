@@ -1,6 +1,6 @@
 # Backend Task Board
 
-Last Updated: 2026-03-14
+Last Updated: 2026-03-16
 Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## B0 - Foundation
@@ -13,7 +13,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## B1 - Data Layer
 
-- [ ] BE-101 Create core tables: users, workspaces, channels, channel_sessions. (IN_PROGRESS)
+- [x] BE-101 Create core tables: users, workspaces, channels, channel_sessions. (DONE)
 - [ ] BE-102 Create conversation tables: conversations, messages. (TODO)
 - [ ] BE-103 Create task tables: tasks, task_runs, automations, automation_runs. (TODO)
 - [ ] BE-104 Create integration tables: integration_accounts, jira_issue_links, calendar_event_links. (TODO)

@@ -27,7 +27,9 @@ class GoogleCalendarService:
     def normalize_webhook_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {
             "source": "google_calendar",
-            "event_id": str(payload.get("resourceId") or payload.get("eventId") or "unknown"),
+            "event_id": str(
+                payload.get("resourceId") or payload.get("eventId") or "unknown"
+            ),
             "type": str(payload.get("resourceState") or "unknown"),
             "payload": payload,
         }

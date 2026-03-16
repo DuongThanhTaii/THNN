@@ -5,15 +5,13 @@ so the application can switch storage backend via DATABASE_URL without changing
 message processing logic.
 """
 
+import logging
 import os
 import threading
-import logging
 from datetime import UTC, datetime
-from typing import Any
 
 from psycopg import OperationalError, connect
 from psycopg.types.json import Jsonb
-
 
 logger = logging.getLogger(__name__)
 
@@ -254,7 +252,7 @@ class PostgresSessionStore:
             with self._conn.cursor() as cur:
                 cur.execute(
                     "DELETE FROM fcc_session_node_map WHERE node_id = ANY(%s)",
-                    (list(map(str, node_ids)),),
+                    (node_ids,),
                 )
 
         with self._lock:
@@ -275,7 +273,10 @@ class PostgresSessionStore:
         def _select() -> dict[str, dict]:
             with self._conn.cursor() as cur:
                 cur.execute("SELECT root_id, tree_data FROM fcc_session_trees")
-                return {str(root_id): dict(tree_data) for root_id, tree_data in cur.fetchall()}
+                return {
+                    str(root_id): dict(tree_data)
+                    for root_id, tree_data in cur.fetchall()
+                }
 
         with self._lock:
             return self._retry_once(_select)
@@ -284,7 +285,9 @@ class PostgresSessionStore:
         def _select() -> dict[str, str]:
             with self._conn.cursor() as cur:
                 cur.execute("SELECT node_id, root_id FROM fcc_session_node_map")
-                return {str(node_id): str(root_id) for node_id, root_id in cur.fetchall()}
+                return {
+                    str(node_id): str(root_id) for node_id, root_id in cur.fetchall()
+                }
 
         with self._lock:
             return self._retry_once(_select)

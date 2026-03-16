@@ -3,11 +3,11 @@
 import base64
 import hashlib
 import json
-from functools import lru_cache
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException
 from cryptography.fernet import Fernet
+from fastapi import APIRouter, HTTPException
 
 from config.settings import get_settings
 from integrations.google_calendar import GoogleCalendarService

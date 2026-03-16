@@ -55,7 +55,7 @@ async def create_workspace(body: WorkspaceCreateRequest) -> WorkspaceResponse:
     with get_db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO app_users(email, display_name)
+            INSERT INTO users(email, display_name)
             VALUES (%s, %s)
             ON CONFLICT (email)
             DO UPDATE SET display_name = EXCLUDED.display_name, updated_at = NOW()

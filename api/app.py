@@ -45,8 +45,9 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     settings = get_settings()
     logger.info("Starting Claude Code Proxy...")
+    database_url = getattr(settings, "database_url", "").strip()
 
-    if settings.database_url.strip():
+    if database_url:
         try:
             applied_count = run_migrations()
             logger.info(f"Database migrations ready (applied={applied_count})")
@@ -102,10 +103,10 @@ async def lifespan(app: FastAPI):
             )
 
             # Initialize session store
-            if settings.database_url.strip():
+            if database_url:
                 from messaging.postgres_session import PostgresSessionStore
 
-                session_store = PostgresSessionStore(settings.database_url)
+                session_store = PostgresSessionStore(database_url)
                 logger.info("Using PostgreSQL session store")
             else:
                 session_store = SessionStore(

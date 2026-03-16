@@ -9,6 +9,7 @@ Uses tree-based queuing for message ordering.
 import asyncio
 import os
 import time
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
@@ -50,6 +51,9 @@ from .trees.queue_manager import (
     MessageTree,
     TreeQueueManager,
 )
+
+if TYPE_CHECKING:
+    from .postgres_session import PostgresSessionStore
 
 # Status message prefixes used to filter our own messages (ignore echo)
 STATUS_MESSAGE_PREFIXES = ("⏳", "💭", "🔧", "✅", "❌", "🚀", "🤖", "📋", "📊", "🔄")
@@ -115,7 +119,7 @@ class ClaudeMessageHandler:
         self,
         platform: MessagingPlatform,
         cli_manager: SessionManagerInterface,
-        session_store: SessionStore,
+        session_store: SessionStore | PostgresSessionStore,
     ):
         self.platform = platform
         self.cli_manager = cli_manager

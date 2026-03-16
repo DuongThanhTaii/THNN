@@ -54,17 +54,13 @@ class Settings(BaseSettings):
     jira_base_url: str = Field(default="", validation_alias="JIRA_BASE_URL")
     jira_client_id: str = Field(default="", validation_alias="JIRA_CLIENT_ID")
     jira_client_secret: str = Field(default="", validation_alias="JIRA_CLIENT_SECRET")
-    jira_webhook_secret: str = Field(
-        default="", validation_alias="JIRA_WEBHOOK_SECRET"
-    )
+    jira_webhook_secret: str = Field(default="", validation_alias="JIRA_WEBHOOK_SECRET")
 
     google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")
     google_client_secret: str = Field(
         default="", validation_alias="GOOGLE_CLIENT_SECRET"
     )
-    google_redirect_uri: str = Field(
-        default="", validation_alias="GOOGLE_REDIRECT_URI"
-    )
+    google_redirect_uri: str = Field(default="", validation_alias="GOOGLE_REDIRECT_URI")
     google_webhook_secret: str = Field(
         default="", validation_alias="GOOGLE_WEBHOOK_SECRET"
     )
