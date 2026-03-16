@@ -33,7 +33,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## B3 - Integrations (Jira)
 
-- [ ] BE-301 Implement Jira OAuth/API-token connection flow. (IN_PROGRESS)
+- [x] BE-301 Implement Jira OAuth/API-token connection flow. (DONE)
 - [ ] BE-302 Implement Jira client wrapper (projects/issues/transitions/comments). (TODO)
 - [ ] BE-303 Add Jira webhook endpoint with signature validation. (TODO)
 - [ ] BE-304 Add Jira event normalization to internal event envelope. (TODO)

@@ -2,9 +2,13 @@
 
 import base64
 import hashlib
+import hmac
 import json
+import secrets
+import time
 from datetime import UTC, datetime, timedelta
 from functools import lru_cache
+from typing import Any
 
 from cryptography.fernet import Fernet
 from fastapi import APIRouter, HTTPException
@@ -44,9 +48,10 @@ def _upsert_integration_account(
     account_label: str,
     access_token: str,
     refresh_token: str | None,
-    metadata: dict,
+    metadata: dict[str, Any],
+    token_expires_at: datetime | None = None,
 ) -> int:
-    expires_at = datetime.now(UTC) + timedelta(days=30)
+    expires_at = token_expires_at or (datetime.now(UTC) + timedelta(days=30))
 
     with get_db_cursor() as cur:
         cur.execute(
@@ -113,16 +118,96 @@ def _upsert_integration_account(
         return integration_id
 
 
+def _oauth_state_secret() -> bytes:
+    settings = get_settings()
+    secret = settings.jwt_secret.strip() or settings.encryption_master_key.strip()
+    if not secret:
+        raise HTTPException(
+            status_code=500,
+            detail="JWT_SECRET or ENCRYPTION_MASTER_KEY is required for OAuth state signing",
+        )
+    return secret.encode("utf-8")
+
+
+def _encode_state_payload(payload: dict[str, Any]) -> str:
+    payload_bytes = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode(
+        "utf-8"
+    )
+    signature = hmac.new(_oauth_state_secret(), payload_bytes, hashlib.sha256).digest()
+    token = base64.urlsafe_b64encode(payload_bytes + b"." + signature).decode("ascii")
+    return token.rstrip("=")
+
+
+def _decode_state_payload(state: str) -> dict[str, Any]:
+    padded = state + "=" * ((4 - (len(state) % 4)) % 4)
+    try:
+        token_bytes = base64.urlsafe_b64decode(padded.encode("ascii"))
+        payload_bytes, signature = token_bytes.rsplit(b".", 1)
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"invalid oauth state format: {e}",
+        ) from e
+
+    expected = hmac.new(_oauth_state_secret(), payload_bytes, hashlib.sha256).digest()
+    if not hmac.compare_digest(signature, expected):
+        raise HTTPException(status_code=400, detail="invalid oauth state signature")
+
+    try:
+        data = json.loads(payload_bytes.decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"invalid oauth state payload: {e}",
+        ) from e
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="invalid oauth state payload type")
+    return data
+
+
+def _build_oauth_state(provider: str, workspace_id: int, ttl_seconds: int = 600) -> str:
+    now = int(time.time())
+    payload = {
+        "provider": provider,
+        "workspace_id": workspace_id,
+        "nonce": secrets.token_urlsafe(12),
+        "iat": now,
+        "exp": now + ttl_seconds,
+    }
+    return _encode_state_payload(payload)
+
+
+def _validate_oauth_state(state: str, provider: str) -> dict[str, Any]:
+    payload = _decode_state_payload(state)
+    if str(payload.get("provider") or "") != provider:
+        raise HTTPException(status_code=400, detail="invalid oauth state provider")
+
+    exp = payload.get("exp")
+    if not isinstance(exp, int):
+        raise HTTPException(status_code=400, detail="invalid oauth state expiration")
+    if int(time.time()) > exp:
+        raise HTTPException(status_code=400, detail="oauth state has expired")
+
+    workspace_id = payload.get("workspace_id")
+    if not isinstance(workspace_id, int):
+        raise HTTPException(status_code=400, detail="invalid oauth state workspace")
+    return payload
+
+
 @router.get("/jira/connect")
-async def jira_connect_payload() -> dict:
+async def jira_connect_payload(workspace_id: int = 1) -> dict:
     service = JiraService()
-    return service.build_oauth_connect_payload()
+    state = _build_oauth_state("jira", workspace_id)
+    payload = service.build_oauth_connect_payload(state)
+    payload["workspace_id"] = workspace_id
+    return payload
 
 
 @router.post("/jira/connect")
 async def jira_connect(workspace_id: int = 1) -> dict:
     service = JiraService()
-    payload = service.build_oauth_connect_payload()
+    state = _build_oauth_state("jira", workspace_id)
+    payload = service.build_oauth_connect_payload(state)
     payload["workspace_id"] = workspace_id
     return payload
 
@@ -131,27 +216,55 @@ async def jira_connect(workspace_id: int = 1) -> dict:
 async def jira_callback(
     code: str = "",
     state: str = "",
-    workspace_id: int = 1,
+    workspace_id: int | None = None,
 ) -> dict:
     if not code.strip():
         raise HTTPException(status_code=400, detail="missing authorization code")
+    if not state.strip():
+        raise HTTPException(status_code=400, detail="missing oauth state")
+
+    state_payload = _validate_oauth_state(state.strip(), "jira")
+    state_workspace_id = int(state_payload["workspace_id"])
+    if workspace_id is not None and workspace_id != state_workspace_id:
+        raise HTTPException(
+            status_code=400, detail="workspace_id does not match oauth state"
+        )
+
+    service = JiraService()
+    token_data = await service.exchange_code_for_tokens(code.strip())
+
+    expires_in_raw = token_data.get("expires_in")
+    token_expires_at: datetime | None = None
+    if isinstance(expires_in_raw, int) and expires_in_raw > 0:
+        token_expires_at = datetime.now(UTC) + timedelta(seconds=expires_in_raw)
 
     integration_id = _upsert_integration_account(
-        workspace_id=workspace_id,
+        workspace_id=state_workspace_id,
         provider="jira",
         account_label="Jira OAuth",
-        access_token=f"jira_access_{code.strip()}",
-        refresh_token=f"jira_refresh_{code.strip()}",
-        metadata={"state": state, "mode": "dev_callback_capture"},
+        access_token=str(token_data["access_token"]),
+        refresh_token=(
+            str(token_data["refresh_token"])
+            if token_data.get("refresh_token") is not None
+            else None
+        ),
+        metadata={
+            "scope": str(token_data.get("scope") or ""),
+            "token_type": str(token_data.get("token_type") or ""),
+            "expires_in": token_data.get("expires_in"),
+            "state_nonce": state_payload.get("nonce"),
+            "mode": "oauth_code_exchange",
+        },
+        token_expires_at=token_expires_at,
     )
 
     return {
         "provider": "jira",
         "status": "connected",
         "message": "Jira callback processed and integration account stored.",
-        "workspace_id": workspace_id,
+        "workspace_id": state_workspace_id,
         "integration_id": integration_id,
-        "state": state,
+        "state": state_payload,
     }
 
 

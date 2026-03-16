@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     jira_base_url: str = Field(default="", validation_alias="JIRA_BASE_URL")
     jira_client_id: str = Field(default="", validation_alias="JIRA_CLIENT_ID")
     jira_client_secret: str = Field(default="", validation_alias="JIRA_CLIENT_SECRET")
+    jira_redirect_uri: str = Field(default="", validation_alias="JIRA_REDIRECT_URI")
+    jira_oauth_scopes: str = Field(
+        default="read:jira-user read:jira-work offline_access",
+        validation_alias="JIRA_OAUTH_SCOPES",
+    )
+    jira_auth_audience: str = Field(
+        default="api.atlassian.com",
+        validation_alias="JIRA_AUTH_AUDIENCE",
+    )
     jira_webhook_secret: str = Field(default="", validation_alias="JIRA_WEBHOOK_SECRET")
 
     google_client_id: str = Field(default="", validation_alias="GOOGLE_CLIENT_ID")

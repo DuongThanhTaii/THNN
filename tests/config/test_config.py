@@ -104,6 +104,28 @@ class TestSettings:
         settings = Settings()
         assert settings.http_connect_timeout == 5.0
 
+    def test_jira_redirect_uri_from_env(self, monkeypatch):
+        """JIRA_REDIRECT_URI env var is loaded into settings."""
+        from config.settings import Settings
+
+        monkeypatch.setenv(
+            "JIRA_REDIRECT_URI",
+            "http://localhost:8082/api/v1/integrations/jira/callback",
+        )
+        settings = Settings()
+        assert (
+            settings.jira_redirect_uri
+            == "http://localhost:8082/api/v1/integrations/jira/callback"
+        )
+
+    def test_jira_oauth_scopes_from_env(self, monkeypatch):
+        """JIRA_OAUTH_SCOPES env var is loaded into settings."""
+        from config.settings import Settings
+
+        monkeypatch.setenv("JIRA_OAUTH_SCOPES", "read:jira-user offline_access")
+        settings = Settings()
+        assert settings.jira_oauth_scopes == "read:jira-user offline_access"
+
 
 # --- NimSettings Validation Tests ---
 class TestNimSettingsValidBounds:
