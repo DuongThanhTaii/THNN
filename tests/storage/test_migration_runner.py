@@ -93,3 +93,17 @@ def test_be102_conversation_migration_defines_expected_tables_and_indexes():
     assert "REFERENCES users(id) ON DELETE SET NULL" in sql
     assert "idx_conversations_workspace_status" in sql
     assert "idx_messages_conversation_created" in sql
+
+
+def test_be103_task_and_automation_run_migration_defines_expected_tables():
+    migration_file = runner.MIGRATIONS_DIR / "006_task_run_and_automation_tables.sql"
+    sql = migration_file.read_text(encoding="utf-8")
+
+    assert "CREATE TABLE IF NOT EXISTS task_runs" in sql
+    assert "CREATE TABLE IF NOT EXISTS automations" in sql
+    assert "CREATE TABLE IF NOT EXISTS automation_runs" in sql
+    assert "REFERENCES tasks(id) ON DELETE CASCADE" in sql
+    assert "REFERENCES automations(id) ON DELETE CASCADE" in sql
+    assert "FROM automation_rules ar" in sql
+    assert "idx_task_runs_workspace_status" in sql
+    assert "idx_automation_runs_workspace_status" in sql

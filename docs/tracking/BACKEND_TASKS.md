@@ -15,7 +15,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 - [x] BE-101 Create core tables: users, workspaces, channels, channel_sessions. (DONE)
 - [x] BE-102 Create conversation tables: conversations, messages. (DONE)
-- [ ] BE-103 Create task tables: tasks, task_runs, automations, automation_runs. (TODO)
+- [x] BE-103 Create task tables: tasks, task_runs, automations, automation_runs. (DONE)
 - [ ] BE-104 Create integration tables: integration_accounts, jira_issue_links, calendar_event_links. (TODO)
 - [ ] BE-105 Create sync tables: sync_policies, sync_conflicts, processed_events. (TODO)
 - [ ] BE-106 Create provider tables: provider_profiles, provider_health_checks. (TODO)
