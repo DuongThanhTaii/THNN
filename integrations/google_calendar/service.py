@@ -24,6 +24,74 @@ class GoogleCalendarService:
         self.http_write_timeout = settings.http_write_timeout
         self.http_connect_timeout = settings.http_connect_timeout
 
+    def _http_timeout(self) -> httpx.Timeout:
+        return httpx.Timeout(
+            timeout=self.http_read_timeout,
+            connect=self.http_connect_timeout,
+            write=self.http_write_timeout,
+        )
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        access_token: str,
+        params: dict[str, Any] | None = None,
+        json_data: dict[str, Any] | None = None,
+    ) -> dict[str, Any] | list[dict[str, Any]] | None:
+        url = f"https://www.googleapis.com/calendar/v3/{path.lstrip('/')}"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=self._http_timeout()) as client:
+                response = await client.request(
+                    method=method.upper(),
+                    url=url,
+                    headers=headers,
+                    params=params,
+                    json=json_data,
+                )
+        except httpx.HTTPError as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Google Calendar API request failed: {type(e).__name__}: {e}",
+            ) from e
+
+        if response.status_code >= 400:
+            detail = response.text
+            try:
+                payload = response.json()
+                error_obj = payload.get("error") if isinstance(payload, dict) else None
+                detail = str(
+                    (
+                        error_obj.get("message")
+                        if isinstance(error_obj, dict)
+                        else payload
+                    )
+                    or response.text
+                )
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=502,
+                detail=f"Google Calendar API error ({response.status_code}): {detail}",
+            )
+
+        if response.status_code == 204 or not response.content:
+            return None
+        data = response.json()
+        if isinstance(data, (dict, list)):
+            return data
+        raise HTTPException(
+            status_code=502,
+            detail="Google Calendar API returned invalid payload",
+        )
+
     def is_configured(self) -> bool:
         return bool(
             self.client_id
@@ -66,11 +134,7 @@ class GoogleCalendarService:
                 detail="Google OAuth is not configured (missing client, secret, redirect, or scopes)",
             )
 
-        timeout = httpx.Timeout(
-            timeout=self.http_read_timeout,
-            connect=self.http_connect_timeout,
-            write=self.http_write_timeout,
-        )
+        timeout = self._http_timeout()
         payload = {
             "grant_type": "authorization_code",
             "client_id": self.client_id,
@@ -123,6 +187,126 @@ class GoogleCalendarService:
                 detail="Google OAuth token response missing access_token",
             )
         return token_data
+
+    async def list_calendars(self, access_token: str) -> list[dict[str, Any]]:
+        data = await self._request(
+            "GET",
+            "/users/me/calendarList",
+            access_token=access_token,
+        )
+        if not isinstance(data, dict):
+            raise HTTPException(status_code=502, detail="Invalid calendar list payload")
+        items = data.get("items", [])
+        return [item for item in items if isinstance(item, dict)]
+
+    async def list_events(
+        self,
+        access_token: str,
+        calendar_id: str,
+        *,
+        time_min: str | None = None,
+        time_max: str | None = None,
+        max_results: int = 50,
+        single_events: bool = True,
+        order_by: str = "startTime",
+    ) -> list[dict[str, Any]]:
+        params: dict[str, str | int] = {
+            "maxResults": max_results,
+            "singleEvents": str(single_events).lower(),
+            "orderBy": order_by,
+        }
+        if time_min:
+            params["timeMin"] = time_min
+        if time_max:
+            params["timeMax"] = time_max
+
+        data = await self._request(
+            "GET",
+            f"/calendars/{calendar_id}/events",
+            access_token=access_token,
+            params=params,
+        )
+        if not isinstance(data, dict):
+            raise HTTPException(status_code=502, detail="Invalid events payload")
+        items = data.get("items", [])
+        return [item for item in items if isinstance(item, dict)]
+
+    async def create_event(
+        self,
+        access_token: str,
+        calendar_id: str,
+        event_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        data = await self._request(
+            "POST",
+            f"/calendars/{calendar_id}/events",
+            access_token=access_token,
+            json_data=event_payload,
+        )
+        if not isinstance(data, dict):
+            raise HTTPException(status_code=502, detail="Invalid create event payload")
+        return data
+
+    async def update_event(
+        self,
+        access_token: str,
+        calendar_id: str,
+        event_id: str,
+        event_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        data = await self._request(
+            "PATCH",
+            f"/calendars/{calendar_id}/events/{event_id}",
+            access_token=access_token,
+            json_data=event_payload,
+        )
+        if not isinstance(data, dict):
+            raise HTTPException(status_code=502, detail="Invalid update event payload")
+        return data
+
+    async def delete_event(
+        self,
+        access_token: str,
+        calendar_id: str,
+        event_id: str,
+    ) -> None:
+        await self._request(
+            "DELETE",
+            f"/calendars/{calendar_id}/events/{event_id}",
+            access_token=access_token,
+        )
+
+    async def watch_events(
+        self,
+        access_token: str,
+        calendar_id: str,
+        *,
+        channel_id: str,
+        webhook_address: str,
+        token: str | None = None,
+        expiration_ms: int | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "id": channel_id,
+            "type": "web_hook",
+            "address": webhook_address,
+        }
+        if token:
+            body["token"] = token
+        if expiration_ms is not None:
+            body["expiration"] = expiration_ms
+
+        data = await self._request(
+            "POST",
+            f"/calendars/{calendar_id}/events/watch",
+            access_token=access_token,
+            json_data=body,
+        )
+        if not isinstance(data, dict):
+            raise HTTPException(
+                status_code=502, detail="Invalid watch response payload"
+            )
+        return data
 
     def normalize_webhook_event(self, payload: dict[str, Any]) -> dict[str, Any]:
         return {

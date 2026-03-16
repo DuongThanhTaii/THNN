@@ -126,6 +126,14 @@ class TestSettings:
         settings = Settings()
         assert settings.jira_oauth_scopes == "read:jira-user offline_access"
 
+    def test_jira_cloud_id_from_env(self, monkeypatch):
+        """JIRA_CLOUD_ID env var is loaded into settings."""
+        from config.settings import Settings
+
+        monkeypatch.setenv("JIRA_CLOUD_ID", "cloud-abc-123")
+        settings = Settings()
+        assert settings.jira_cloud_id == "cloud-abc-123"
+
     def test_google_oauth_scopes_from_env(self, monkeypatch):
         """GOOGLE_OAUTH_SCOPES env var is loaded into settings."""
         from config.settings import Settings

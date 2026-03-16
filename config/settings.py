@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     jira_base_url: str = Field(default="", validation_alias="JIRA_BASE_URL")
     jira_client_id: str = Field(default="", validation_alias="JIRA_CLIENT_ID")
     jira_client_secret: str = Field(default="", validation_alias="JIRA_CLIENT_SECRET")
+    jira_cloud_id: str = Field(default="", validation_alias="JIRA_CLOUD_ID")
     jira_redirect_uri: str = Field(default="", validation_alias="JIRA_REDIRECT_URI")
     jira_oauth_scopes: str = Field(
         default="read:jira-user read:jira-work offline_access",

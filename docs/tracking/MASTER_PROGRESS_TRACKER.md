@@ -51,6 +51,8 @@ Window: 2026-03-14 -> 2026-03-21
 - Completed BE-101 core data-layer baseline by adding channels/channel_sessions migrations and users-table compatibility migration.
 - Implemented Jira OAuth code flow with signed state validation and live token exchange endpoint handling.
 - Implemented Google OAuth code flow with signed state validation and live token exchange endpoint handling.
+- Implemented Jira API client wrapper methods for projects/issues/transitions/comments.
+- Implemented Google Calendar client wrapper methods for calendar/event CRUD and watch registration.
 
 ## Risk Register
 

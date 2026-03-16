@@ -34,7 +34,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 ## B3 - Integrations (Jira)
 
 - [x] BE-301 Implement Jira OAuth/API-token connection flow. (DONE)
-- [ ] BE-302 Implement Jira client wrapper (projects/issues/transitions/comments). (TODO)
+- [x] BE-302 Implement Jira client wrapper (projects/issues/transitions/comments). (DONE)
 - [ ] BE-303 Add Jira webhook endpoint with signature validation. (TODO)
 - [ ] BE-304 Add Jira event normalization to internal event envelope. (TODO)
 - [ ] BE-305 Add Jira retry policy + dead-letter handling. (TODO)
@@ -42,7 +42,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 ## B4 - Integrations (Google Calendar)
 
 - [x] BE-401 Implement Google OAuth2 connection flow. (DONE)
-- [ ] BE-402 Implement Google Calendar client wrapper (event CRUD/watch). (TODO)
+- [x] BE-402 Implement Google Calendar client wrapper (event CRUD/watch). (DONE)
 - [ ] BE-403 Add Google webhook endpoint with verification logic. (TODO)
 - [ ] BE-404 Add Google event normalization to internal event envelope. (TODO)
 - [ ] BE-405 Add Google retry policy + dead-letter handling. (TODO)
