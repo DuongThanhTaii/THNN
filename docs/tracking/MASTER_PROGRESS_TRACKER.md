@@ -53,6 +53,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Implemented Google OAuth code flow with signed state validation and live token exchange endpoint handling.
 - Implemented Jira API client wrapper methods for projects/issues/transitions/comments.
 - Implemented Google Calendar client wrapper methods for calendar/event CRUD and watch registration.
+- Completed BE-102 by adding conversations/messages schema migration with FK and index coverage.
 
 ## Risk Register
 

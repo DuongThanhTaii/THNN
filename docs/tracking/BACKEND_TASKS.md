@@ -14,7 +14,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 ## B1 - Data Layer
 
 - [x] BE-101 Create core tables: users, workspaces, channels, channel_sessions. (DONE)
-- [ ] BE-102 Create conversation tables: conversations, messages. (TODO)
+- [x] BE-102 Create conversation tables: conversations, messages. (DONE)
 - [ ] BE-103 Create task tables: tasks, task_runs, automations, automation_runs. (TODO)
 - [ ] BE-104 Create integration tables: integration_accounts, jira_issue_links, calendar_event_links. (TODO)
 - [ ] BE-105 Create sync tables: sync_policies, sync_conflicts, processed_events. (TODO)

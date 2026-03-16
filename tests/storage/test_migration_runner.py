@@ -80,3 +80,16 @@ def test_be101_users_compat_migration_exists_and_backfills():
     assert "CREATE TABLE IF NOT EXISTS users" in sql
     assert "FROM app_users" in sql
     assert "REFERENCES users(id)" in sql
+
+
+def test_be102_conversation_migration_defines_expected_tables_and_indexes():
+    migration_file = runner.MIGRATIONS_DIR / "005_conversation_tables.sql"
+    sql = migration_file.read_text(encoding="utf-8")
+
+    assert "CREATE TABLE IF NOT EXISTS conversations" in sql
+    assert "CREATE TABLE IF NOT EXISTS messages" in sql
+    assert "REFERENCES conversations(id) ON DELETE CASCADE" in sql
+    assert "REFERENCES channel_sessions(id) ON DELETE SET NULL" in sql
+    assert "REFERENCES users(id) ON DELETE SET NULL" in sql
+    assert "idx_conversations_workspace_status" in sql
+    assert "idx_messages_conversation_created" in sql
