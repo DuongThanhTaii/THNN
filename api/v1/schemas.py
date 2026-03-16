@@ -38,6 +38,34 @@ class GenericMessageResponse(BaseModel):
     message: str
 
 
+class AutomationCreateRequest(BaseModel):
+    workspace_id: int = Field(ge=1)
+    name: str = Field(min_length=1, max_length=200)
+    trigger_type: str = Field(min_length=1, max_length=100)
+    action_type: str = Field(min_length=1, max_length=100)
+    config: dict = Field(default_factory=dict)
+    enabled: bool = True
+
+
+class AutomationUpdateRequest(BaseModel):
+    workspace_id: int = Field(ge=1)
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    trigger_type: str | None = Field(default=None, min_length=1, max_length=100)
+    action_type: str | None = Field(default=None, min_length=1, max_length=100)
+    config: dict | None = None
+    enabled: bool | None = None
+
+
+class AutomationResponse(BaseModel):
+    id: int
+    workspace_id: int
+    name: str
+    trigger_type: str
+    action_type: str
+    config: dict
+    enabled: bool
+
+
 class BootstrapResponse(BaseModel):
     user_id: int
     workspace_id: int

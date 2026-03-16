@@ -27,7 +27,7 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 - [x] BE-202 Add auth endpoints (login, refresh, logout). (SCAFFOLDED)
 - [ ] BE-203 Add workspace and user management endpoints. (SCAFFOLDED)
 - [x] BE-204 Add task CRUD endpoints with pagination/filtering. (DONE)
-- [ ] BE-205 Add automation CRUD endpoints. (TODO)
+- [x] BE-205 Add automation CRUD endpoints. (DONE)
 - [ ] BE-206 Add websocket server channel for realtime updates. (SCAFFOLDED)
 - [ ] BE-207 Add role-based access control middleware. (TODO)
 

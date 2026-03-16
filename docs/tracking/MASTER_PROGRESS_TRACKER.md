@@ -58,6 +58,7 @@ Window: 2026-03-14 -> 2026-03-21
 - Reconciled BE-104 and BE-105 as already-covered tables in existing 001/002 migrations (integration and sync schemas).
 - Completed BE-106 and BE-107 by adding provider profile/health and audit/auth event schema migration.
 - Finished B1 data-layer board scope (BE-101 -> BE-107).
+- Implemented BE-205 by replacing automation endpoint scaffold with workspace-scoped CRUD and API tests.
 
 ## Risk Register
 
