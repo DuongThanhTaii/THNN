@@ -336,6 +336,27 @@ class TestSettingsOptionalStr:
         s = Settings()
         assert s.messaging_platform == "discord"
 
+    def test_esp32_enabled_from_env(self, monkeypatch):
+        from config.settings import Settings
+
+        monkeypatch.setenv("ENABLE_ESP32", "true")
+        s = Settings()
+        assert s.enable_esp32 is True
+
+    def test_esp32_broker_url_empty_to_none(self, monkeypatch):
+        from config.settings import Settings
+
+        monkeypatch.setenv("ESP32_MQTT_BROKER_URL", "")
+        s = Settings()
+        assert s.esp32_mqtt_broker_url is None
+
+    def test_esp32_topic_prefix_from_env(self, monkeypatch):
+        from config.settings import Settings
+
+        monkeypatch.setenv("ESP32_MQTT_TOPIC_PREFIX", "devices")
+        s = Settings()
+        assert s.esp32_mqtt_topic_prefix == "devices"
+
     def test_whisper_device_auto_rejected(self, monkeypatch):
         """WHISPER_DEVICE=auto raises ValidationError (auto removed)."""
         from config.settings import Settings

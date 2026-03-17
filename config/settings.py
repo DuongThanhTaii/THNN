@@ -36,11 +36,50 @@ class Settings(BaseSettings):
         default="", validation_alias="PUBLIC_DASHBOARD_URL"
     )
     cors_allow_origins: str = Field(default="", validation_alias="CORS_ALLOW_ORIGINS")
+    automation_scheduler_enabled: bool = Field(
+        default=True,
+        validation_alias="AUTOMATION_SCHEDULER_ENABLED",
+    )
+    automation_scheduler_poll_seconds: int = Field(
+        default=30,
+        validation_alias="AUTOMATION_SCHEDULER_POLL_SECONDS",
+    )
+    automation_scheduler_max_batch: int = Field(
+        default=100,
+        validation_alias="AUTOMATION_SCHEDULER_MAX_BATCH",
+    )
+    automation_worker_queue_size: int = Field(
+        default=500,
+        validation_alias="AUTOMATION_WORKER_QUEUE_SIZE",
+    )
+    automation_worker_concurrency: int = Field(
+        default=2,
+        validation_alias="AUTOMATION_WORKER_CONCURRENCY",
+    )
 
     # ==================== Auth / Security ====================
     jwt_secret: str = Field(default="", validation_alias="JWT_SECRET")
     jwt_algorithm: str = Field(default="HS256", validation_alias="JWT_ALGORITHM")
     rbac_enforce: bool = Field(default=False, validation_alias="RBAC_ENFORCE")
+    rate_limit_enforce: bool = Field(default=False, validation_alias="RATE_LIMIT_ENFORCE")
+    rate_limit_user_limit: int = Field(default=120, validation_alias="RATE_LIMIT_USER_LIMIT")
+    rate_limit_user_window: int = Field(default=60, validation_alias="RATE_LIMIT_USER_WINDOW")
+    rate_limit_workspace_limit: int = Field(
+        default=600,
+        validation_alias="RATE_LIMIT_WORKSPACE_LIMIT",
+    )
+    rate_limit_workspace_window: int = Field(
+        default=60,
+        validation_alias="RATE_LIMIT_WORKSPACE_WINDOW",
+    )
+    rate_limit_channel_limit: int = Field(
+        default=300,
+        validation_alias="RATE_LIMIT_CHANNEL_LIMIT",
+    )
+    rate_limit_channel_window: int = Field(
+        default=60,
+        validation_alias="RATE_LIMIT_CHANNEL_WINDOW",
+    )
     access_token_expire_minutes: int = Field(
         default=60, validation_alias="ACCESS_TOKEN_EXPIRE_MINUTES"
     )
@@ -49,6 +88,9 @@ class Settings(BaseSettings):
     )
     encryption_master_key: str = Field(
         default="", validation_alias="ENCRYPTION_MASTER_KEY"
+    )
+    encryption_fallback_keys: str = Field(
+        default="", validation_alias="ENCRYPTION_FALLBACK_KEYS"
     )
 
     # ==================== Integrations ====================
@@ -171,6 +213,22 @@ class Settings(BaseSettings):
     allowed_discord_channels: str | None = Field(
         default=None, validation_alias="ALLOWED_DISCORD_CHANNELS"
     )
+    enable_esp32: bool = Field(default=False, validation_alias="ENABLE_ESP32")
+    esp32_mqtt_broker_url: str | None = Field(
+        default=None, validation_alias="ESP32_MQTT_BROKER_URL"
+    )
+    esp32_mqtt_username: str | None = Field(
+        default=None, validation_alias="ESP32_MQTT_USERNAME"
+    )
+    esp32_mqtt_password: str | None = Field(
+        default=None, validation_alias="ESP32_MQTT_PASSWORD"
+    )
+    esp32_mqtt_topic_prefix: str = Field(
+        default="agent", validation_alias="ESP32_MQTT_TOPIC_PREFIX"
+    )
+    esp32_device_shared_secret: str | None = Field(
+        default=None, validation_alias="ESP32_DEVICE_SHARED_SECRET"
+    )
     claude_workspace: str = "./agent_workspace"
     allowed_dir: str = ""
 
@@ -185,6 +243,10 @@ class Settings(BaseSettings):
         "allowed_telegram_user_id",
         "discord_bot_token",
         "allowed_discord_channels",
+        "esp32_mqtt_broker_url",
+        "esp32_mqtt_username",
+        "esp32_mqtt_password",
+        "esp32_device_shared_secret",
         mode="before",
     )
     @classmethod
@@ -200,6 +262,24 @@ class Settings(BaseSettings):
             raise ValueError(
                 f"whisper_device must be 'cpu', 'cuda', or 'nvidia_nim', got {v!r}"
             )
+        return v
+
+    @field_validator(
+        "automation_scheduler_poll_seconds",
+        "automation_scheduler_max_batch",
+        "automation_worker_queue_size",
+        "automation_worker_concurrency",
+        "rate_limit_user_limit",
+        "rate_limit_user_window",
+        "rate_limit_workspace_limit",
+        "rate_limit_workspace_window",
+        "rate_limit_channel_limit",
+        "rate_limit_channel_window",
+    )
+    @classmethod
+    def validate_positive_int(cls, v: int) -> int:
+        if v <= 0:
+            raise ValueError("scheduler settings must be greater than zero")
         return v
 
     @field_validator("model", "model_opus", "model_sonnet", "model_haiku")
@@ -223,7 +303,7 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def check_nvidia_nim_api_key(self) -> Settings:
+    def check_nvidia_nim_api_key(self) -> "Settings":
         if (
             self.voice_note_enabled
             and self.whisper_device == "nvidia_nim"

@@ -318,6 +318,66 @@ Control Claude Code remotely from Discord (or Telegram). Send tasks, watch live 
 **Capabilities:**
 
 - Tree-based message threading: reply to a message to fork the conversation
+
+## ESP32 MQTT Contract
+
+The ESP32 adapter uses MQTT with a topic prefix (default: `agent`) and two channel types:
+
+- Command topic (server -> device): `<prefix>/<device_or_chat_id>/command`
+- Status topic (device -> server): `<prefix>/<device_id>/status`
+
+### Required environment variables
+
+```dotenv
+MESSAGING_PLATFORM="esp32"
+ENABLE_ESP32=true
+ESP32_MQTT_BROKER_URL="mqtts://broker.example.com:8883"
+ESP32_MQTT_TOPIC_PREFIX="agent"
+```
+
+Optional auth fields:
+
+```dotenv
+ESP32_MQTT_USERNAME=""
+ESP32_MQTT_PASSWORD=""
+ESP32_DEVICE_SHARED_SECRET=""
+```
+
+### Outbound command payload (published by server)
+
+```json
+{
+  "action": "send|edit|delete",
+  "chat_id": "device-1",
+  "message_id": "esp32-out-1",
+  "text": "optional",
+  "reply_to_message_id": "optional",
+  "message_thread_id": "optional",
+  "parse_mode": "optional",
+  "shared_secret": "optional"
+}
+```
+
+### Inbound status payload (published by device)
+
+The adapter accepts either plain text or JSON on `<prefix>/<device_id>/status`.
+
+JSON form:
+
+```json
+{
+  "text": "temperature 31.2C",
+  "chat_id": "device-1",
+  "user_id": "esp32:device-1",
+  "message_id": "d-1001",
+  "reply_to_message_id": "optional",
+  "message_thread_id": "optional",
+  "username": "optional"
+}
+```
+
+If a plain text payload is sent, the adapter maps it automatically to an internal incoming message using `device_id` from topic.
+
 - Session persistence across server restarts
 - Live streaming of thinking tokens, tool calls, and results
 - Unlimited concurrent Claude CLI sessions (concurrency controlled by `PROVIDER_MAX_CONCURRENCY`)

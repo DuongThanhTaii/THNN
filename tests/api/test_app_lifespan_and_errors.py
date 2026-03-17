@@ -124,8 +124,8 @@ def test_app_lifespan_sets_state_and_cleans_up(tmp_path, messaging_enabled):
         patch.object(api_app_mod, "get_settings", return_value=settings),
         patch.object(api_app_mod, "cleanup_provider", new=cleanup_provider),
         patch(
-            "messaging.platforms.factory.create_messaging_platform",
-            return_value=fake_platform if messaging_enabled else None,
+            "messaging.platforms.factory.create_messaging_platforms",
+            return_value=[fake_platform] if messaging_enabled else [],
         ) as create_platform,
         patch("messaging.session.SessionStore", return_value=session_store),
         patch("cli.manager.CLISessionManager", return_value=cli_manager),
@@ -195,8 +195,8 @@ def test_app_lifespan_cleanup_continues_if_platform_stop_raises(tmp_path):
         patch.object(api_app_mod, "get_settings", return_value=settings),
         patch.object(api_app_mod, "cleanup_provider", new=cleanup_provider),
         patch(
-            "messaging.platforms.factory.create_messaging_platform",
-            return_value=fake_platform,
+            "messaging.platforms.factory.create_messaging_platforms",
+            return_value=[fake_platform],
         ),
         patch("messaging.session.SessionStore", return_value=session_store),
         patch("cli.manager.CLISessionManager", return_value=cli_manager),
@@ -234,7 +234,7 @@ def test_app_lifespan_messaging_import_error_no_crash(tmp_path, caplog):
         patch.object(api_app_mod, "get_settings", return_value=settings),
         patch.object(api_app_mod, "cleanup_provider", new=cleanup_provider),
         patch(
-            "messaging.platforms.factory.create_messaging_platform",
+            "messaging.platforms.factory.create_messaging_platforms",
             side_effect=ImportError("discord not installed"),
         ),
         TestClient(app),
@@ -284,8 +284,8 @@ def test_app_lifespan_platform_start_exception_cleanup_still_runs(tmp_path):
         patch.object(api_app_mod, "get_settings", return_value=settings),
         patch.object(api_app_mod, "cleanup_provider", new=cleanup_provider),
         patch(
-            "messaging.platforms.factory.create_messaging_platform",
-            return_value=fake_platform,
+            "messaging.platforms.factory.create_messaging_platforms",
+            return_value=[fake_platform],
         ),
         patch("messaging.session.SessionStore", return_value=session_store),
         patch("cli.manager.CLISessionManager", return_value=cli_manager),
@@ -336,8 +336,8 @@ def test_app_lifespan_flush_pending_save_exception_warning_only(tmp_path):
         patch.object(api_app_mod, "get_settings", return_value=settings),
         patch.object(api_app_mod, "cleanup_provider", new=cleanup_provider),
         patch(
-            "messaging.platforms.factory.create_messaging_platform",
-            return_value=fake_platform,
+            "messaging.platforms.factory.create_messaging_platforms",
+            return_value=[fake_platform],
         ),
         patch("messaging.session.SessionStore", return_value=session_store),
         patch("cli.manager.CLISessionManager", return_value=cli_manager),
@@ -346,4 +346,72 @@ def test_app_lifespan_flush_pending_save_exception_warning_only(tmp_path):
         pass
 
     session_store.flush_pending_save.assert_called_once()
+    cleanup_provider.assert_awaited_once()
+
+
+def test_app_lifespan_supports_multiple_platforms(tmp_path):
+    """Multiple configured platforms start/stop and expose backward-compatible aliases."""
+    from api.app import create_app
+
+    app = create_app()
+
+    settings = SimpleNamespace(
+        messaging_platform="telegram,discord",
+        telegram_bot_token="token-t",
+        allowed_telegram_user_id="123",
+        discord_bot_token="token-d",
+        allowed_discord_channels="111,222",
+        allowed_dir=str(tmp_path / "workspace"),
+        claude_workspace=str(tmp_path / "data"),
+        host="127.0.0.1",
+        port=8082,
+        log_file=str(tmp_path / "server.log"),
+    )
+
+    telegram_platform = MagicMock()
+    telegram_platform.name = "telegram"
+    telegram_platform.on_message = MagicMock()
+    telegram_platform.start = AsyncMock()
+    telegram_platform.stop = AsyncMock()
+
+    discord_platform = MagicMock()
+    discord_platform.name = "discord"
+    discord_platform.on_message = MagicMock()
+    discord_platform.start = AsyncMock()
+    discord_platform.stop = AsyncMock()
+
+    session_store = MagicMock()
+    session_store.get_all_trees.return_value = []
+    session_store.get_node_mapping.return_value = {}
+    session_store.sync_from_tree_data = MagicMock()
+
+    cli_manager = MagicMock()
+    cli_manager.stop_all = AsyncMock()
+
+    api_app_mod = importlib.import_module("api.app")
+    cleanup_provider = AsyncMock()
+    with (
+        patch.object(api_app_mod, "get_settings", return_value=settings),
+        patch.object(api_app_mod, "cleanup_provider", new=cleanup_provider),
+        patch(
+            "messaging.platforms.factory.create_messaging_platforms",
+            return_value=[telegram_platform, discord_platform],
+        ),
+        patch("messaging.session.SessionStore", return_value=session_store),
+        patch("cli.manager.CLISessionManager", return_value=cli_manager),
+        TestClient(app),
+    ):
+        pass
+
+    telegram_platform.start.assert_awaited_once()
+    discord_platform.start.assert_awaited_once()
+    telegram_platform.stop.assert_awaited_once()
+    discord_platform.stop.assert_awaited_once()
+    assert getattr(app.state, "messaging_platform", None) is telegram_platform
+    assert getattr(app.state, "message_handler", None) is not None
+    assert getattr(app.state, "messaging_platforms", []) == [
+        telegram_platform,
+        discord_platform,
+    ]
+    assert len(getattr(app.state, "message_handlers", [])) == 2
     cleanup_provider.assert_awaited_once()

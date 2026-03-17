@@ -11,6 +11,23 @@ from loguru import logger
 from .base import MessagingPlatform
 
 
+def _normalize_platform_types(platform_types: str | list[str]) -> list[str]:
+    if isinstance(platform_types, str):
+        raw_items = platform_types.split(",")
+    else:
+        raw_items = platform_types
+
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        name = item.strip().lower()
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        normalized.append(name)
+    return normalized
+
+
 def create_messaging_platform(
     platform_type: str,
     **kwargs,
@@ -50,7 +67,51 @@ def create_messaging_platform(
             allowed_channel_ids=kwargs.get("allowed_discord_channels"),
         )
 
+    if platform_type == "web":
+        from .web import WebPlatform
+
+        return WebPlatform(workspace_id=int(kwargs.get("web_workspace_id", 1)))
+
+    if platform_type == "esp32":
+        if not bool(kwargs.get("enable_esp32", False)):
+            logger.info("ESP32 channel disabled, skipping platform setup")
+            return None
+
+        broker_url = kwargs.get("esp32_mqtt_broker_url")
+        if not broker_url:
+            logger.info("No ESP32 MQTT broker URL configured, skipping platform setup")
+            return None
+
+        from .esp32 import Esp32MqttPlatform
+
+        return Esp32MqttPlatform(
+            broker_url=str(broker_url),
+            username=kwargs.get("esp32_mqtt_username"),
+            password=kwargs.get("esp32_mqtt_password"),
+            topic_prefix=str(kwargs.get("esp32_mqtt_topic_prefix", "agent")),
+            device_shared_secret=kwargs.get("esp32_device_shared_secret"),
+        )
+
     logger.warning(
-        f"Unknown messaging platform: '{platform_type}'. Supported: 'telegram', 'discord'"
+        "Unknown messaging platform: "
+        f"'{platform_type}'. Supported: 'telegram', 'discord', 'web', 'esp32'"
     )
     return None
+
+
+def create_messaging_platforms(
+    platform_types: str | list[str],
+    **kwargs,
+) -> list[MessagingPlatform]:
+    """Create multiple configured messaging platforms.
+
+    Accepts either a comma-separated string or a list of platform names.
+    Unknown or unconfigured platforms are skipped.
+    """
+
+    platforms: list[MessagingPlatform] = []
+    for platform_type in _normalize_platform_types(platform_types):
+        platform = create_messaging_platform(platform_type=platform_type, **kwargs)
+        if platform is not None:
+            platforms.append(platform)
+    return platforms

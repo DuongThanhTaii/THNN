@@ -1,6 +1,6 @@
 # Backend Task Board
 
-Last Updated: 2026-03-16
+Last Updated: 2026-03-17
 Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 ## B0 - Foundation
@@ -35,49 +35,49 @@ Legend: TODO | IN_PROGRESS | BLOCKED | DONE
 
 - [x] BE-301 Implement Jira OAuth/API-token connection flow. (DONE)
 - [x] BE-302 Implement Jira client wrapper (projects/issues/transitions/comments). (DONE)
-- [ ] BE-303 Add Jira webhook endpoint with signature validation. (TODO)
-- [ ] BE-304 Add Jira event normalization to internal event envelope. (TODO)
-- [ ] BE-305 Add Jira retry policy + dead-letter handling. (TODO)
+- [x] BE-303 Add Jira webhook endpoint with signature validation. (DONE)
+- [x] BE-304 Add Jira event normalization to internal event envelope. (DONE)
+- [x] BE-305 Add Jira retry policy + dead-letter handling. (DONE)
 
 ## B4 - Integrations (Google Calendar)
 
 - [x] BE-401 Implement Google OAuth2 connection flow. (DONE)
 - [x] BE-402 Implement Google Calendar client wrapper (event CRUD/watch). (DONE)
-- [ ] BE-403 Add Google webhook endpoint with verification logic. (TODO)
-- [ ] BE-404 Add Google event normalization to internal event envelope. (TODO)
-- [ ] BE-405 Add Google retry policy + dead-letter handling. (TODO)
+- [x] BE-403 Add Google webhook endpoint with verification logic. (DONE)
+- [x] BE-404 Add Google event normalization to internal event envelope. (DONE)
+- [x] BE-405 Add Google retry policy + dead-letter handling. (DONE)
 
 ## B5 - Sync Engine
 
-- [ ] BE-501 Build Jira -> Calendar mapping service. (TODO)
-- [ ] BE-502 Build Calendar -> Jira mapping service. (TODO)
-- [ ] BE-503 Implement conflict detection and resolution policies. (TODO)
-- [ ] BE-504 Implement idempotency registry for webhook events. (TODO)
-- [ ] BE-505 Add sync status projections for dashboard. (TODO)
+- [x] BE-501 Build Jira -> Calendar mapping service. (DONE)
+- [x] BE-502 Build Calendar -> Jira mapping service. (DONE)
+- [x] BE-503 Implement conflict detection and resolution policies. (DONE)
+- [x] BE-504 Implement idempotency registry for webhook events. (DONE)
+- [x] BE-505 Add sync status projections for dashboard. (DONE)
 
 ## B6 - Channels and Automation
 
-- [ ] BE-601 Refactor messaging platform factory to allow multi-platform active at once. (TODO)
-- [ ] BE-602 Add web channel adapter integrated with websocket. (TODO)
-- [ ] BE-603 Add ESP32 MQTT adapter with command/status topics. (TODO)
-- [ ] BE-604 Add scheduler and rule engine for daily automation workflows. (TODO)
-- [ ] BE-605 Add background worker for asynchronous action execution. (TODO)
+- [x] BE-601 Refactor messaging platform factory to allow multi-platform active at once. (DONE)
+- [x] BE-602 Add web channel adapter integrated with websocket. (DONE)
+- [x] BE-603 Add ESP32 MQTT adapter with command/status topics. (DONE - contract docs added in README)
+- [x] BE-604 Add scheduler and rule engine for daily automation workflows. (DONE)
+- [x] BE-605 Add background worker for asynchronous action execution. (DONE)
 
 ## B7 - Reliability and Security
 
-- [ ] BE-701 Add central secret handling and key rotation guide. (IN_PROGRESS)
-- [ ] BE-702 Add rate limits per user/workspace/channel. (TODO)
-- [ ] BE-703 Add distributed locks for critical task execution. (TODO)
-- [ ] BE-704 Add tracing/metrics/log correlation IDs. (TODO)
-- [ ] BE-705 Add SLO dashboards and alerting definitions. (TODO)
+- [x] BE-701 Add central secret handling and key rotation guide. (DONE)
+- [x] BE-702 Add rate limits per user/workspace/channel. (DONE)
+- [x] BE-703 Add distributed locks for critical task execution. (DONE)
+- [x] BE-704 Add tracing/metrics/log correlation IDs. (DONE)
+- [x] BE-705 Add SLO dashboards and alerting definitions. (DONE)
 
 ## B8 - Quality and Release
 
-- [ ] BE-801 Add unit tests for new services and mappings. (TODO)
-- [ ] BE-802 Add integration tests for Jira/Google webhook flows. (TODO)
-- [ ] BE-803 Add E2E flow test Telegram -> Jira -> Calendar sync. (TODO)
-- [ ] BE-804 Add load test scenarios for burst webhook events. (TODO)
-- [ ] BE-805 Add release checklist and rollback runbook. (TODO)
+- [x] BE-801 Add unit tests for new services and mappings. (DONE)
+- [x] BE-802 Add integration tests for Jira/Google webhook flows. (DONE)
+- [x] BE-803 Add E2E flow test Telegram -> Jira -> Calendar sync. (DONE)
+- [x] BE-804 Add load test scenarios for burst webhook events. (DONE)
+- [x] BE-805 Add release checklist and rollback runbook. (DONE)
 
 ## Status Update Format
 

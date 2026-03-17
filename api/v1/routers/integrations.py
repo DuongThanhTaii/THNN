@@ -10,9 +10,12 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
-from cryptography.fernet import Fernet
 from fastapi import APIRouter, HTTPException
 
+from config.secrets import (
+    build_fernet_bundle_from_values,
+    get_oauth_state_secret_from_values,
+)
 from config.settings import get_settings
 from integrations.google_calendar import GoogleCalendarService
 from integrations.jira import JiraService
@@ -22,19 +25,12 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
 @lru_cache
-def _build_fernet() -> Fernet:
+def _build_fernet():
     settings = get_settings()
-    master_key = settings.encryption_master_key.strip()
-    if not master_key:
-        raise HTTPException(
-            status_code=500,
-            detail="ENCRYPTION_MASTER_KEY is required for integration token encryption",
-        )
-
-    # Fernet requires a 32-byte url-safe base64 key.
-    derived = hashlib.sha256(master_key.encode("utf-8")).digest()
-    fernet_key = base64.urlsafe_b64encode(derived)
-    return Fernet(fernet_key)
+    return build_fernet_bundle_from_values(
+        master_key=settings.encryption_master_key,
+        fallback_keys=getattr(settings, "encryption_fallback_keys", ""),
+    )
 
 
 def _encrypt_token(value: str) -> str:
@@ -120,13 +116,11 @@ def _upsert_integration_account(
 
 def _oauth_state_secret() -> bytes:
     settings = get_settings()
-    secret = settings.jwt_secret.strip() or settings.encryption_master_key.strip()
-    if not secret:
-        raise HTTPException(
-            status_code=500,
-            detail="JWT_SECRET or ENCRYPTION_MASTER_KEY is required for OAuth state signing",
-        )
-    return secret.encode("utf-8")
+    return get_oauth_state_secret_from_values(
+        jwt_secret=settings.jwt_secret,
+        master_key=settings.encryption_master_key,
+        fallback_keys=getattr(settings, "encryption_fallback_keys", ""),
+    )
 
 
 def _encode_state_payload(payload: dict[str, Any]) -> str:

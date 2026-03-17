@@ -1,0 +1,31 @@
+groups:
+  - name: api-reliability
+    rules:
+      - alert: ApiHigh5xxRatio
+        expr: api_5xx_ratio > 0.02
+        for: 10m
+        labels:
+          severity: sev2
+        annotations:
+          summary: "High 5xx ratio on API"
+          description: "5xx ratio exceeded 2% for 10 minutes."
+
+      - alert: ApiHighLatencyP95
+        expr: api_latency_p95_seconds > 1.0
+        for: 15m
+        labels:
+          severity: sev2
+        annotations:
+          summary: "High API latency P95"
+          description: "P95 latency exceeded 1 second for 15 minutes."
+
+  - name: automation-reliability
+    rules:
+      - alert: AutomationRunFailureSpike
+        expr: automation_run_failure_ratio > 0.05
+        for: 30m
+        labels:
+          severity: sev3
+        annotations:
+          summary: "Automation failures are elevated"
+          description: "Automation failure ratio exceeded 5% for 30 minutes."

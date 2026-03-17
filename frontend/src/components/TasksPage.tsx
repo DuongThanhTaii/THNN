@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createTask,
@@ -7,89 +8,103 @@ import {
   type Task,
   updateTask,
 } from "../lib/api";
+import { useAppStore } from "../shared/state/appStore";
 
 const STATUSES = ["todo", "in_progress", "done", "blocked"] as const;
 
 export function TasksPage() {
-  const [workspaceId, setWorkspaceId] = useState(1);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const workspaceId = useAppStore((state) => state.workspaceId);
+  const setWorkspaceId = useAppStore((state) => state.setWorkspaceId);
+  const setGlobalError = useAppStore((state) => state.setGlobalError);
+
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(20);
   const [offset, setOffset] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
 
-  const refresh = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await listTasksFiltered({
+  const tasksQuery = useQuery<Task[]>({
+    queryKey: ["tasks", workspaceId, statusFilter, query, limit, offset],
+    queryFn: () =>
+      listTasksFiltered({
         workspaceId,
         status: statusFilter !== "all" ? statusFilter : undefined,
         q: query.trim() || undefined,
         limit,
         offset,
-      });
-      setTasks(data);
-    } catch (e: unknown) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  };
+      }),
+  });
 
-  useEffect(() => {
-    void refresh();
-  }, [workspaceId, statusFilter, query, limit, offset]);
+  const createTaskMutation = useMutation({
+    mutationFn: createTask,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setGlobalError("");
+    },
+    onError: (error) => setGlobalError(String(error)),
+  });
+
+  const updateTaskMutation = useMutation({
+    mutationFn: updateTask,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setGlobalError("");
+    },
+    onError: (error) => setGlobalError(String(error)),
+  });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: deleteTask,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      setGlobalError("");
+    },
+    onError: (error) => setGlobalError(String(error)),
+  });
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!title.trim()) return;
 
-    setError("");
-    try {
-      await createTask({
-        workspace_id: workspaceId,
-        title: title.trim(),
-        description: description.trim() || undefined,
-      });
-      setTitle("");
-      setDescription("");
-      await refresh();
-    } catch (e: unknown) {
-      setError(String(e));
-    }
+    await createTaskMutation.mutateAsync({
+      workspace_id: workspaceId,
+      title: title.trim(),
+      description: description.trim() || undefined,
+    });
+    setTitle("");
+    setDescription("");
   };
 
   const changeStatus = async (task: Task, newStatus: string) => {
-    setError("");
-    try {
-      await updateTask({
-        taskId: task.id,
-        workspace_id: workspaceId,
-        status: newStatus,
-      });
-      await refresh();
-    } catch (e: unknown) {
-      setError(String(e));
-    }
+    await updateTaskMutation.mutateAsync({
+      taskId: task.id,
+      workspace_id: workspaceId,
+      status: newStatus,
+    });
   };
 
   const removeTask = async (task: Task) => {
-    setError("");
-    try {
-      await deleteTask({
-        taskId: task.id,
-        workspaceId,
-      });
-      await refresh();
-    } catch (e: unknown) {
-      setError(String(e));
-    }
+    await deleteTaskMutation.mutateAsync({
+      taskId: task.id,
+      workspaceId,
+    });
   };
+
+  useEffect(() => {
+    if (tasksQuery.error) {
+      setGlobalError(String(tasksQuery.error));
+    }
+  }, [setGlobalError, tasksQuery.error]);
+
+  const tasks = tasksQuery.data ?? [];
+  const loading = tasksQuery.isFetching;
+  const kanbanColumns = STATUSES.map((status) => ({
+    status,
+    items: tasks.filter((task) => task.status === status),
+  }));
 
   return (
     <section className="stack">
@@ -125,13 +140,13 @@ export function TasksPage() {
               />
             </label>
             <button className="btn-primary" type="submit">
-              Save Task
+              {createTaskMutation.isPending ? "Saving..." : "Save Task"}
             </button>
           </form>
         </article>
 
         <article className="card">
-          <h3>Task List</h3>
+          <h3>Task Board</h3>
           <div className="toolbar">
             <input
               value={query}
@@ -156,6 +171,13 @@ export function TasksPage() {
               ))}
             </select>
             <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as "list" | "kanban")}
+            >
+              <option value="kanban">kanban</option>
+              <option value="list">list</option>
+            </select>
+            <select
               value={limit}
               onChange={(e) => {
                 setOffset(0);
@@ -169,7 +191,7 @@ export function TasksPage() {
           </div>
           {loading ? <p>Loading tasks...</p> : null}
           {!loading && tasks.length === 0 ? <p>No tasks yet.</p> : null}
-          {tasks.length > 0 ? (
+          {tasks.length > 0 && viewMode === "list" ? (
             <ul className="list">
               {tasks.map((task) => (
                 <li key={task.id}>
@@ -193,6 +215,7 @@ export function TasksPage() {
                       className="btn-danger"
                       type="button"
                       onClick={() => void removeTask(task)}
+                      disabled={deleteTaskMutation.isPending}
                     >
                       Delete
                     </button>
@@ -200,6 +223,60 @@ export function TasksPage() {
                 </li>
               ))}
             </ul>
+          ) : null}
+          {tasks.length > 0 && viewMode === "kanban" ? (
+            <div className="kanban-board">
+              {kanbanColumns.map((column) => (
+                <section key={column.status} className="kanban-column">
+                  <header className="kanban-header">
+                    <strong>{column.status}</strong>
+                    <span className="muted">{column.items.length}</span>
+                  </header>
+                  <div className="kanban-items">
+                    {column.items.length === 0 ? (
+                      <p className="muted">No tasks</p>
+                    ) : (
+                      column.items.map((task) => (
+                        <article
+                          key={task.id}
+                          className="kanban-card stack compact"
+                        >
+                          <div className="task-main">
+                            <strong>{task.title}</strong>
+                            <span className="muted">#{task.id}</span>
+                          </div>
+                          <p className="muted">
+                            {task.description || "No description"}
+                          </p>
+                          <div className="task-actions">
+                            <select
+                              value={task.status}
+                              onChange={(e) =>
+                                void changeStatus(task, e.target.value)
+                              }
+                            >
+                              {STATUSES.map((status) => (
+                                <option key={status} value={status}>
+                                  {status}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              className="btn-danger"
+                              type="button"
+                              onClick={() => void removeTask(task)}
+                              disabled={deleteTaskMutation.isPending}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </article>
+                      ))
+                    )}
+                  </div>
+                </section>
+              ))}
+            </div>
           ) : null}
           <div className="toolbar">
             <button
@@ -224,8 +301,6 @@ export function TasksPage() {
           </div>
         </article>
       </div>
-
-      {error ? <p className="error">{error}</p> : null}
     </section>
   );
 }

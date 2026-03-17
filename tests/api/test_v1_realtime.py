@@ -58,3 +58,27 @@ def test_publish_workspace_event_reaches_websocket_subscriber():
     assert event_message["workspace_id"] == 5
     assert event_message["event_type"] == "test.event"
     assert event_message["payload"] == {"value": 5}
+
+
+def test_client_event_handler_receives_json_payload():
+    client = _make_client()
+    received: list[dict] = []
+
+    async def handler(event: dict):
+        received.append(event)
+
+    realtime.register_workspace_client_event_handler(8, handler)
+    try:
+        with client.websocket_connect("/ws/workspaces/8") as ws:
+            ws.receive_json()  # connected
+            ws.send_text('{"text":"hello","chat_id":"web-1"}')
+            echoed = ws.receive_json()
+    finally:
+        realtime.unregister_workspace_client_event_handler(8, handler)
+
+    assert echoed["type"] == "client_event"
+    assert isinstance(echoed["payload"], dict)
+    assert echoed["payload"]["text"] == "hello"
+    assert len(received) == 1
+    assert received[0]["workspace_id"] == 8
+    assert received[0]["payload"]["chat_id"] == "web-1"

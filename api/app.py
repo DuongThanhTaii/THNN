@@ -2,6 +2,8 @@
 
 import asyncio
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -14,6 +16,8 @@ from providers.exceptions import ProviderError
 from storage.migrations.runner import run_migrations
 
 from .dependencies import cleanup_provider
+from .observability import metrics_registry
+from .rate_limit import enforce_rate_limits
 from .rbac import enforce_rbac
 from .routes import router
 from .v1.router import root_webhook_router, v1_router
@@ -57,23 +61,35 @@ async def lifespan(app: FastAPI):
             raise
 
     # Initialize messaging platform if configured
-    messaging_platform = None
-    message_handler = None
+    messaging_platforms = []
+    message_handlers = []
     cli_manager = None
+    automation_scheduler = None
 
     try:
-        # Use the messaging factory to create the right platform
-        from messaging.platforms.factory import create_messaging_platform
+        # Use the messaging factory to create one or more configured platforms.
+        from messaging.platforms.factory import create_messaging_platforms
 
-        messaging_platform = create_messaging_platform(
-            platform_type=settings.messaging_platform,
+        messaging_platforms = create_messaging_platforms(
+            platform_types=settings.messaging_platform,
             bot_token=settings.telegram_bot_token,
             allowed_user_id=settings.allowed_telegram_user_id,
             discord_bot_token=settings.discord_bot_token,
             allowed_discord_channels=settings.allowed_discord_channels,
+            web_workspace_id=1,
+            enable_esp32=getattr(settings, "enable_esp32", False),
+            esp32_mqtt_broker_url=getattr(settings, "esp32_mqtt_broker_url", None),
+            esp32_mqtt_username=getattr(settings, "esp32_mqtt_username", None),
+            esp32_mqtt_password=getattr(settings, "esp32_mqtt_password", None),
+            esp32_mqtt_topic_prefix=getattr(
+                settings, "esp32_mqtt_topic_prefix", "agent"
+            ),
+            esp32_device_shared_secret=getattr(
+                settings, "esp32_device_shared_secret", None
+            ),
         )
 
-        if messaging_platform:
+        if messaging_platforms:
             from cli.manager import CLISessionManager
             from messaging.handler import ClaudeMessageHandler
             from messaging.session import SessionStore
@@ -115,45 +131,46 @@ async def lifespan(app: FastAPI):
                 )
                 logger.info("Using file-based session store")
 
-            # Create and register message handler
-            message_handler = ClaudeMessageHandler(
-                platform=messaging_platform,
-                cli_manager=cli_manager,
-                session_store=session_store,
-            )
-
-            # Restore tree state if available
+            # Restore tree state once and reuse for each platform handler.
             saved_trees = session_store.get_all_trees()
-            if saved_trees:
-                logger.info(f"Restoring {len(saved_trees)} conversation trees...")
-                from messaging.trees.queue_manager import TreeQueueManager
+            saved_node_map = session_store.get_node_mapping()
 
-                message_handler.replace_tree_queue(
-                    TreeQueueManager.from_dict(
-                        {
-                            "trees": saved_trees,
-                            "node_to_tree": session_store.get_node_mapping(),
-                        },
-                        queue_update_callback=message_handler.update_queue_positions,
-                        node_started_callback=message_handler.mark_node_processing,
-                    )
+            for messaging_platform in messaging_platforms:
+                message_handler = ClaudeMessageHandler(
+                    platform=messaging_platform,
+                    cli_manager=cli_manager,
+                    session_store=session_store,
                 )
-                # Reconcile restored state - anything PENDING/IN_PROGRESS is lost across restart
-                if message_handler.tree_queue.cleanup_stale_nodes() > 0:
-                    # Sync back and save
-                    tree_data = message_handler.tree_queue.to_dict()
-                    session_store.sync_from_tree_data(
-                        tree_data["trees"], tree_data["node_to_tree"]
+
+                if saved_trees:
+                    logger.info(
+                        f"Restoring {len(saved_trees)} conversation trees for {messaging_platform.name}..."
                     )
+                    from messaging.trees.queue_manager import TreeQueueManager
 
-            # Wire up the handler
-            messaging_platform.on_message(message_handler.handle_message)
+                    message_handler.replace_tree_queue(
+                        TreeQueueManager.from_dict(
+                            {
+                                "trees": saved_trees,
+                                "node_to_tree": saved_node_map,
+                            },
+                            queue_update_callback=message_handler.update_queue_positions,
+                            node_started_callback=message_handler.mark_node_processing,
+                        )
+                    )
+                    # Reconcile restored state - anything PENDING/IN_PROGRESS is lost across restart
+                    if message_handler.tree_queue.cleanup_stale_nodes() > 0:
+                        tree_data = message_handler.tree_queue.to_dict()
+                        session_store.sync_from_tree_data(
+                            tree_data["trees"], tree_data["node_to_tree"]
+                        )
 
-            # Start the platform
-            await messaging_platform.start()
-            logger.info(
-                f"{messaging_platform.name} platform started with message handler"
-            )
+                messaging_platform.on_message(message_handler.handle_message)
+                await messaging_platform.start()
+                message_handlers.append(message_handler)
+                logger.info(
+                    f"{messaging_platform.name} platform started with message handler"
+                )
 
     except ImportError as e:
         logger.warning(f"Messaging module import error: {e}")
@@ -164,23 +181,57 @@ async def lifespan(app: FastAPI):
         logger.error(traceback.format_exc())
 
     # Store in app state for access in routes
-    app.state.messaging_platform = messaging_platform
-    app.state.message_handler = message_handler
+    app.state.messaging_platforms = messaging_platforms
+    app.state.message_handlers = message_handlers
+    # Backward-compatible aliases used in existing routes/tests.
+    app.state.messaging_platform = (
+        messaging_platforms[0] if messaging_platforms else None
+    )
+    app.state.message_handler = message_handlers[0] if message_handlers else None
     app.state.cli_manager = cli_manager
+
+    if database_url and settings.automation_scheduler_enabled:
+        try:
+            from api.automation import AutomationScheduler
+
+            automation_scheduler = AutomationScheduler(
+                poll_seconds=settings.automation_scheduler_poll_seconds,
+                max_batch=settings.automation_scheduler_max_batch,
+                worker_queue_size=settings.automation_worker_queue_size,
+                worker_concurrency=settings.automation_worker_concurrency,
+            )
+            await automation_scheduler.start()
+        except Exception as e:
+            logger.warning(f"Failed to start automation scheduler: {e}")
+
+    app.state.automation_scheduler = automation_scheduler
 
     yield
 
     # Cleanup
-    if message_handler and hasattr(message_handler, "session_store"):
+    flushed_session_store_ids = set()
+    for message_handler in message_handlers:
+        if not hasattr(message_handler, "session_store"):
+            continue
+        session_store_obj = message_handler.session_store
+        marker = id(session_store_obj)
+        if marker in flushed_session_store_ids:
+            continue
+        flushed_session_store_ids.add(marker)
         try:
-            message_handler.session_store.flush_pending_save()
+            session_store_obj.flush_pending_save()
         except Exception as e:
             logger.warning(f"Session store flush on shutdown: {e}")
     logger.info("Shutdown requested, cleaning up...")
-    if messaging_platform:
-        await _best_effort("messaging_platform.stop", messaging_platform.stop())
+    for messaging_platform in messaging_platforms:
+        await _best_effort(
+            f"{messaging_platform.name}.stop",
+            messaging_platform.stop(),
+        )
     if cli_manager:
         await _best_effort("cli_manager.stop_all", cli_manager.stop_all())
+    if automation_scheduler is not None:
+        await _best_effort("automation_scheduler.stop", automation_scheduler.stop())
     await _best_effort("cleanup_provider", cleanup_provider())
 
     # Ensure background limiter worker doesn't keep the loop alive.
@@ -206,6 +257,49 @@ def create_app() -> FastAPI:
         version="2.0.0",
         lifespan=lifespan,
     )
+
+    @app.middleware("http")
+    async def trace_context_middleware(request: Request, call_next):
+        request_id = (request.headers.get("x-request-id") or f"req_{uuid.uuid4().hex[:12]}").strip()
+        correlation_id = (
+            request.headers.get("x-correlation-id") or f"corr_{uuid.uuid4().hex[:12]}"
+        ).strip()
+        request.state.request_id = request_id
+        request.state.correlation_id = correlation_id
+
+        start = time.perf_counter()
+        status_code = 500
+        with logger.contextualize(
+            request_id=request_id,
+            correlation_id=correlation_id,
+            method=request.method,
+            path=request.url.path,
+        ):
+            try:
+                response = await call_next(request)
+                status_code = response.status_code
+            except Exception:
+                await metrics_registry.observe(
+                    path=request.url.path,
+                    method=request.method,
+                    status_code=status_code,
+                    latency_seconds=time.perf_counter() - start,
+                )
+                raise
+
+        response.headers["X-Request-ID"] = request_id
+        response.headers["X-Correlation-ID"] = correlation_id
+        await metrics_registry.observe(
+            path=request.url.path,
+            method=request.method,
+            status_code=status_code,
+            latency_seconds=time.perf_counter() - start,
+        )
+        return response
+
+    @app.middleware("http")
+    async def rate_limit_middleware(request: Request, call_next):
+        return await enforce_rate_limits(request, call_next)
 
     @app.middleware("http")
     async def rbac_middleware(request: Request, call_next):

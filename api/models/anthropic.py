@@ -1,5 +1,7 @@
 """Pydantic models for Anthropic-compatible requests."""
 
+from __future__ import annotations
+
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -101,7 +103,7 @@ class MessagesRequest(BaseModel):
     resolved_provider_model: str | None = None
 
     @model_validator(mode="after")
-    def map_model(self) -> MessagesRequest:
+    def map_model(self) -> "MessagesRequest":
         """Map any Claude model name to the configured model (model-aware)."""
         settings = get_settings()
         if self.original_model is None:

@@ -15,7 +15,7 @@ from loguru import logger
 _configured = False
 
 # Context keys we promote to top-level JSON for traceability
-_CONTEXT_KEYS = ("request_id", "node_id", "chat_id")
+_CONTEXT_KEYS = ("request_id", "correlation_id", "node_id", "chat_id")
 
 
 def _serialize_with_context(record) -> str:

@@ -4,6 +4,8 @@ Coordinates data access, async processing, and error handling.
 Uses TreeRepository for data, TreeQueueProcessor for async logic.
 """
 
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Awaitable, Callable
 
@@ -436,7 +438,7 @@ class TreeQueueManager:
         queue_update_callback: Callable[[MessageTree], Awaitable[None]] | None = None,
         node_started_callback: Callable[[MessageTree, str], Awaitable[None]]
         | None = None,
-    ) -> TreeQueueManager:
+    ) -> "TreeQueueManager":
         """Deserialize from dictionary."""
         return cls(
             queue_update_callback=queue_update_callback,

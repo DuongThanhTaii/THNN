@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from api.observability import metrics_registry
 from api.v1.schemas import BootstrapResponse, HealthResponse
 from config.settings import get_settings
 from storage.db import can_connect, get_db_cursor
@@ -63,3 +64,9 @@ async def bootstrap_demo() -> BootstrapResponse:
         workspace_slug=str(workspace_row[1]),
         workspace_name=str(workspace_row[2]),
     )
+
+
+@router.get("/metrics")
+async def metrics() -> dict:
+    """Return in-process request counters and latency aggregates."""
+    return await metrics_registry.snapshot()

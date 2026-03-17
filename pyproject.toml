@@ -23,6 +23,7 @@ dependencies = [
     "loguru>=0.7.0",
     "psycopg[binary]>=3.2.0",
     "cryptography>=46.0.1",
+    "paho-mqtt>=2.1.0",
 ]
 
 [project.scripts]

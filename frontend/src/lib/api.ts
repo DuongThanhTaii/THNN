@@ -36,15 +36,142 @@ export type IntegrationAccountsResponse = {
   items: IntegrationAccount[];
 };
 
+export type LoginInput = {
+  email: string;
+  password: string;
+  role: "owner" | "admin" | "member" | "viewer";
+};
+
+export type RefreshInput = {
+  refreshToken: string;
+  userEmail: string;
+  role: "owner" | "admin" | "member" | "viewer";
+};
+
+export type AuthSession = {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+  userEmail: string;
+  role: "owner" | "admin" | "member" | "viewer";
+};
+
+export type Workspace = {
+  id: number;
+  slug: string;
+  name: string;
+  owner_user_id: number | null;
+};
+
+export type Automation = {
+  id: number;
+  workspace_id: number;
+  name: string;
+  trigger_type: string;
+  action_type: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+};
+
+export type SyncConflictSummary = {
+  id: number;
+  source_system: string;
+  target_system: string;
+  entity_ref: string;
+  reason: string;
+  status: string;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type SyncStatusProjection = {
+  workspace_id: number;
+  health: string;
+  policies_total: number;
+  policies_enabled: number;
+  conflicts_open: number;
+  conflicts_resolved: number;
+  last_conflict_at: string | null;
+  recent_conflicts: SyncConflictSummary[];
+};
+
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") ||
   "http://localhost:8082";
 
+function loadPersistedAccessToken(): string {
+  if (typeof window === "undefined") return "";
+
+  const raw = window.localStorage.getItem("agent-auth");
+  if (!raw) return "";
+
+  try {
+    const parsed = JSON.parse(raw) as {
+      state?: { accessToken?: string };
+    };
+    return parsed.state?.accessToken || "";
+  } catch {
+    return "";
+  }
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function fallbackToken(prefix: string): string {
+  return `${prefix}_${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function parseAuthSession(data: unknown, fallbackEmail: string): AuthSession {
+  const payload = (data && typeof data === "object" ? data : {}) as Record<
+    string,
+    unknown
+  >;
+
+  const accessToken =
+    asString(payload.access_token) ||
+    asString(payload.accessToken) ||
+    fallbackToken("access");
+
+  const refreshToken =
+    asString(payload.refresh_token) ||
+    asString(payload.refreshToken) ||
+    fallbackToken("refresh");
+
+  const expiresAtCandidate =
+    asString(payload.expires_at) || asString(payload.expiresAt);
+
+  const expiresAt =
+    expiresAtCandidate || new Date(Date.now() + 15 * 60_000).toISOString();
+  const userEmail =
+    asString(payload.email) || fallbackEmail || "owner@agent.local";
+  const roleCandidate = asString(payload.role).toLowerCase();
+  const role =
+    roleCandidate === "owner" ||
+    roleCandidate === "admin" ||
+    roleCandidate === "member" ||
+    roleCandidate === "viewer"
+      ? roleCandidate
+      : "owner";
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresAt,
+    userEmail,
+    role,
+  };
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const authToken = loadPersistedAccessToken();
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
       "content-type": "application/json",
+      ...(authToken ? { authorization: `Bearer ${authToken}` } : {}),
       ...(init?.headers || {}),
     },
   });
@@ -197,5 +324,133 @@ export function listIntegrationAccounts(
 
   return requestJson<IntegrationAccountsResponse>(
     `/api/v1/integrations/accounts?${params.toString()}`,
+  );
+}
+
+export async function loginAuth(input: LoginInput): Promise<AuthSession> {
+  const response = await requestJson<Record<string, unknown>>(
+    "/api/v1/auth/login",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        email: input.email,
+        password: input.password,
+        role: input.role,
+      }),
+    },
+  );
+
+  const session = parseAuthSession(response, input.email);
+  return {
+    ...session,
+    role: input.role || session.role,
+  };
+}
+
+export async function refreshAuth(input: RefreshInput): Promise<AuthSession> {
+  const response = await requestJson<Record<string, unknown>>(
+    "/api/v1/auth/refresh",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        refresh_token: input.refreshToken,
+      }),
+    },
+  );
+
+  const session = parseAuthSession(response, input.userEmail);
+  return {
+    ...session,
+    role: input.role || session.role,
+  };
+}
+
+export function listWorkspaces(): Promise<Workspace[]> {
+  return requestJson<Workspace[]>("/api/v1/workspaces?limit=100&offset=0");
+}
+
+export function listAutomations(input: {
+  workspaceId: number;
+  enabled?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<Automation[]> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(input.workspaceId));
+  if (typeof input.enabled === "boolean") {
+    params.set("enabled", String(input.enabled));
+  }
+  if (typeof input.limit === "number") params.set("limit", String(input.limit));
+  if (typeof input.offset === "number")
+    params.set("offset", String(input.offset));
+
+  return requestJson<Automation[]>(`/api/v1/automations?${params.toString()}`);
+}
+
+export function createAutomation(input: {
+  workspace_id: number;
+  name: string;
+  trigger_type: string;
+  action_type: string;
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+}): Promise<Automation> {
+  return requestJson<Automation>("/api/v1/automations", {
+    method: "POST",
+    body: JSON.stringify({
+      ...input,
+      config: input.config || {},
+      enabled: typeof input.enabled === "boolean" ? input.enabled : true,
+    }),
+  });
+}
+
+export function updateAutomation(input: {
+  automationId: number;
+  workspace_id: number;
+  name?: string;
+  trigger_type?: string;
+  action_type?: string;
+  config?: Record<string, unknown>;
+  enabled?: boolean;
+}): Promise<Automation> {
+  const payload: Record<string, unknown> = {
+    workspace_id: input.workspace_id,
+  };
+  if (typeof input.name === "string") payload.name = input.name;
+  if (typeof input.trigger_type === "string")
+    payload.trigger_type = input.trigger_type;
+  if (typeof input.action_type === "string")
+    payload.action_type = input.action_type;
+  if (input.config) payload.config = input.config;
+  if (typeof input.enabled === "boolean") payload.enabled = input.enabled;
+
+  return requestJson<Automation>(`/api/v1/automations/${input.automationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAutomation(input: {
+  automationId: number;
+  workspaceId: number;
+}): Promise<{ status: string; deleted: number }> {
+  return requestJson<{ status: string; deleted: number }>(
+    `/api/v1/automations/${input.automationId}?workspace_id=${input.workspaceId}`,
+    { method: "DELETE" },
+  );
+}
+
+export function getSyncStatus(input: {
+  workspaceId: number;
+  recentLimit?: number;
+}): Promise<SyncStatusProjection> {
+  const params = new URLSearchParams();
+  params.set("workspace_id", String(input.workspaceId));
+  if (typeof input.recentLimit === "number") {
+    params.set("recent_limit", String(input.recentLimit));
+  }
+  return requestJson<SyncStatusProjection>(
+    `/api/v1/sync/status?${params.toString()}`,
   );
 }

@@ -71,3 +71,25 @@ class BootstrapResponse(BaseModel):
     workspace_id: int
     workspace_slug: str
     workspace_name: str
+
+
+class SyncConflictSummary(BaseModel):
+    id: int
+    source_system: str
+    target_system: str
+    entity_ref: str
+    reason: str
+    status: str
+    created_at: str
+    resolved_at: str | None
+
+
+class SyncStatusProjectionResponse(BaseModel):
+    workspace_id: int
+    health: str
+    policies_total: int
+    policies_enabled: int
+    conflicts_open: int
+    conflicts_resolved: int
+    last_conflict_at: str | None
+    recent_conflicts: list[SyncConflictSummary]

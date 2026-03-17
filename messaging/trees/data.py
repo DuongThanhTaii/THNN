@@ -3,6 +3,8 @@
 Contains MessageState, MessageNode, and MessageTree classes.
 """
 
+from __future__ import annotations
+
 import asyncio
 from collections import deque
 from contextlib import asynccontextmanager
@@ -116,7 +118,7 @@ class MessageNode:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> MessageNode:
+    def from_dict(cls, data: dict) -> "MessageNode":
         """Create from dictionary (JSON deserialization)."""
         incoming_data = data["incoming"]
         incoming = IncomingMessage(
@@ -190,7 +192,7 @@ class MessageTree:
         incoming: IncomingMessage,
         status_message_id: str,
         parent_id: str,
-    ) -> MessageNode:
+    ) -> "MessageNode":
         """
         Add a child node to the tree.
 
@@ -222,11 +224,11 @@ class MessageTree:
             logger.debug(f"Added node {node_id} as child of {parent_id}")
             return node
 
-    def get_node(self, node_id: str) -> MessageNode | None:
+    def get_node(self, node_id: str) -> "MessageNode" | None:
         """Get a node by ID (O(1) lookup)."""
         return self._nodes.get(node_id)
 
-    def get_root(self) -> MessageNode:
+    def get_root(self) -> "MessageNode":
         """Get the root node."""
         return self._nodes[self.root_id]
 
@@ -237,7 +239,7 @@ class MessageTree:
             return []
         return [self._nodes[cid] for cid in node.children_ids if cid in self._nodes]
 
-    def get_parent(self, node_id: str) -> MessageNode | None:
+    def get_parent(self, node_id: str) -> "MessageNode" | None:
         """Get the parent node."""
         node = self._nodes.get(node_id)
         if not node or not node.parent_id:
@@ -402,7 +404,7 @@ class MessageTree:
         self._status_to_node[node.status_message_id] = node.node_id
 
     @classmethod
-    def from_dict(cls, data: dict) -> MessageTree:
+    def from_dict(cls, data: dict) -> "MessageTree":
         """Deserialize tree from dictionary."""
         root_id = data["root_id"]
         nodes_data = data["nodes"]
@@ -427,7 +429,7 @@ class MessageTree:
         """Check if a node exists in this tree."""
         return node_id in self._nodes
 
-    def find_node_by_status_message(self, status_msg_id: str) -> MessageNode | None:
+    def find_node_by_status_message(self, status_msg_id: str) -> "MessageNode" | None:
         """Find the node that has this status message ID (O(1) lookup)."""
         node_id = self._status_to_node.get(status_msg_id)
         return self._nodes.get(node_id) if node_id else None
